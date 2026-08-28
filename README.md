@@ -1,6 +1,7 @@
 # Sistema de Gestión de Ventas y Cobertura para Farmacia de Pueblo
 
 **Repositorio:** https://github.com/nahueldgo/farmacia-gestion
+**Tablero de gestión (Trello):** https://trello.com/b/xqg3934a/sistema-gestion-farmacia-tfi
 
 **Integrantes:**
 - Esper, Amira Yasmin Elizabeth
