@@ -1,6 +1,6 @@
 # Sistema de Gestión de Ventas y Cobertura para Farmacia de Pueblo
 
-🔗 **Repositorio:** https://github.com/nahueldgo/farmacia-gestion
+**Repositorio:** https://github.com/nahueldgo/farmacia-gestion
 
 **Integrantes:**
 - Esper, Amira Yasmin Elizabeth
