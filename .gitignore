@@ -1,0 +1,12 @@
+# Variables de entorno
+.env
+
+# Dependencias (se generan solas con npm install / pip install)
+node_modules/
+__pycache__/
+*.pyc
+venv/
+
+# Build/compilados
+dist/
+build/

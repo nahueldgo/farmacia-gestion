@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: farmacia_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-farmacia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-farmacia_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-farmacia_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-farmacia_user} -d ${POSTGRES_DB:-farmacia_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: farmacia_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-farmacia_user}:${POSTGRES_PASSWORD:-farmacia_pass}@db:5432/${POSTGRES_DB:-farmacia_db}
+      SECRET_KEY: ${SECRET_KEY:-cambiar-esta-clave-en-produccion}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
