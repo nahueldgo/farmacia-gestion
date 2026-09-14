@@ -4,6 +4,8 @@
 
 **Tablero de gestión (Trello):** https://trello.com/b/xqg3934a/sistema-gestion-farmacia-tfi
 
+**Documentación de decisiones de diseño (Colab):** https://colab.research.google.com/drive/1tkleiplB1XAmPp-ilChZXaJo768y9x44
+
 **Integrantes:**
 - Esper, Amira Yasmin Elizabeth
 - Dugo, Nahuel Lucas
