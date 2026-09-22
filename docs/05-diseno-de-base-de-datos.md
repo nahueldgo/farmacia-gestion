@@ -20,15 +20,16 @@ Entre **PostgreSQL** y **MySQL** (ambos con soporte gratuito y técnicamente equ
 
 ## Evolución del modelo de datos
 
-El esquema actual no salió terminado desde el primer intento. Pasó por revisiones a medida que se lo confrontó con casos de uso reales del dominio. Estos son los cambios concretos entre la propuesta inicial de entidades y el modelo final de 15 tablas:
+El esquema actual no salió terminado desde el primer intento. Pasó por revisiones a medida que se lo confrontó con casos de uso reales del dominio. Estos son los cambios concretos entre la propuesta inicial de entidades y el modelo final:
 
 - **Separación de `Producto` en `Producto` + `Medicamento`.** En una versión anterior del modelo, todos los productos (medicamentos, perfumería, cuidado personal) vivían en una única tabla `Producto` con todos los campos posibles. Al revisar casos concretos (¿qué concentración tiene un jabón? ¿qué principio activo tiene un termómetro?), quedó claro que varios atributos solo tenían sentido para medicamentos. Eso llevó a separar `Medicamento` como una especialización 1:1 de `Producto` (ver sección 4).
 - **`CategoriaProducto` se redefinió como `CategoriaCoberturaObraSocial`.** La propuesta inicial tenía una tabla genérica `CategoriaProducto`, sin relación explícita con cobertura. Al avanzar en el diseño del motor de reglas de cobertura quedó claro que la única clasificación que el sistema necesita es específicamente la categoría del PMO (ambulatorio, crónico, oncológico, etc.), no una categoría de producto genérica, así que se renombró y se acotó su propósito a esa función puntual: ser el dato que se cruza con `ReglaCobertura` para calcular el copago.
 - **Se agregaron `ClaseTerapeutica` y `Medicamento_ClaseTerapeutica`.** La propuesta inicial no distinguía clases terapéuticas (analgésico, antibiótico, etc.): no existían en el modelo original. Se incorporaron ambas al detectar que un medicamento puede pertenecer a más de una clase terapéutica a la vez, una relación N:M que se resuelve con la tabla asociativa `Medicamento_ClaseTerapeutica`.
 - **Se eliminó la relación directa entre `Cliente` y `ObraSocial`.** En el modelo inicial, un cliente pertenecía a una obra social de forma fija (relación N:1 permanente sobre `Cliente`). Se descartó ese diseño porque la cobertura se define en el momento de cada venta, no como un atributo estable del cliente (un mismo cliente puede presentarse con o sin cobertura según la venta puntual). Por eso `obra_social_id` quedó en `Venta`, no en `Cliente`.
 - **Eliminación de una entidad `MedioPago` independiente.** También se había considerado, en algún momento, modelar los medios de pago como una tabla de catálogo propia (siguiendo el mismo patrón que `CategoriaCoberturaObraSocial`). Se descartó porque no justificaba una tabla aparte, y quedó como una columna con valores fijos directamente en `Venta` (ver sección 12).
+- **Se convirtieron `laboratorio`, `principio_activo`, `condicion_iva` y `forma_farmaceutica` de texto a tablas de catálogo.** A raíz de un comentario del tutor sobre varios atributos que vivían como texto libre en `Producto` y `Medicamento`, se revisó cada caso y se decidió pasarlos a tablas propias (`Laboratorio`, `PrincipioActivo`, `CondicionIva`, `FormaFarmaceutica`), evitando inconsistencias de escritura (ej. "Bagó" vs. "Laboratorios Bagó") y permitiendo actualizar un dato como la alícuota de IVA en un solo lugar. `tipo_producto`, `medio_pago` y `estado` se revisaron con el mismo criterio y se mantuvieron como texto con `CHECK`, por ser conjuntos de valores fijos y estables controlados por el sistema, no por el usuario (ver sección 19).
 
-## 3. Entidades del modelo (15 tablas)
+## 3. Entidades del modelo (19 tablas)
 
 | Entidad | Rol |
 |---|---|
@@ -47,6 +48,10 @@ El esquema actual no salió terminado desde el primer intento. Pasó por revisio
 | `MovimientoCaja` | Ingresos/retiros manuales dentro de una `Caja` |
 | `Venta` | Cabecera de cada operación |
 | `DetalleVenta` | Resuelve el N:M entre `Venta` y `Producto` |
+| `Laboratorio` | Catálogo de fabricantes, referenciado desde `Producto` |
+| `PrincipioActivo` | Catálogo de principios activos, referenciado desde `Medicamento` |
+| `CondicionIva` | Catálogo de condiciones de IVA con su alícuota, referenciado desde `Producto` |
+| `FormaFarmaceutica` | Catálogo de formas farmacéuticas, referenciado desde `Medicamento` |
 
 ## Justificación por entidad (síntesis)
 
@@ -67,6 +72,10 @@ El esquema actual no salió terminado desde el primer intento. Pasó por revisio
 | `MovimientoCaja` | Ingreso o retiro manual de dinero que no proviene de una venta (ver sección 13). |
 | `Venta` | Cabecera de cada operación: agrupa quién la registró, a quién (si corresponde), bajo qué caja, con qué medio de pago, y los montos totales discriminados. Incorpora `receta_verificada` como confirmación de que el empleado controló la receta antes de aplicar el copago. |
 | `DetalleVenta` | Entidad asociativa entre `Venta` y `Producto`: carga el lote exacto vendido y el precio unitario histórico (ver secciones 14 y 16). |
+| `Laboratorio` | Catálogo de fabricantes. Evita que un mismo laboratorio se cargue de formas distintas al escribirlo a mano (ver sección 19). |
+| `PrincipioActivo` | Catálogo de principios activos. Permite identificar qué medicamentos son alternativas entre sí (ver sección 19). |
+| `CondicionIva` | Catálogo de condiciones de IVA, con su alícuota como dato propio de la tabla (ver sección 19). |
+| `FormaFarmaceutica` | Catálogo de formas farmacéuticas (comprimido, jarabe, etc.), compartido entre medicamentos (ver sección 19). |
 
 ## Relación y cardinalidad
 
@@ -90,10 +99,14 @@ El esquema actual no salió terminado desde el primer intento. Pasó por revisio
 | Caja - Venta | 1:N | Todas las ventas de una jornada quedan asociadas a la caja abierta en ese momento. |
 | Caja - MovimientoCaja | 1:N | Los movimientos manuales del día quedan agrupados bajo la caja de esa jornada. |
 | Venta - DetalleVenta | 1:N | Una venta tiene una o más líneas de producto; una línea no existe sin su venta (dependencia fuerte). |
+| Laboratorio - Producto | 1:N | Un laboratorio tiene muchos productos. Es obligatorio en los medicamentos y opcional en el resto. |
+| PrincipioActivo - Medicamento | 1:N | Un principio activo agrupa muchos medicamentos (distintas marcas). Cada medicamento tiene uno. |
+| CondicionIva - Producto | 1:N | Todos los productos tienen una condición de IVA. |
+| FormaFarmaceutica - Medicamento | 1:N | Una forma agrupa muchos medicamentos. |
 
 ## Diagrama Entidad-Relación (DER)
 
-![Diagrama Entidad-Relación](farmacia_der_v2.png)
+![Diagrama Entidad-Relación](farmacia_der_v2.drawio.png)
 
 ## 4. Separación `Producto` / `Medicamento`
 
@@ -115,6 +128,8 @@ El esquema completo (DDL) de ambas tablas está versionado en el repositorio (`d
 
 Como `laboratorio` aplica siempre pero es más importante para medicamentos, se resolvió con una restricción `CHECK` condicional en `Producto` en vez de mover la columna de tabla: el campo puede quedar vacío en general, pero la base exige que esté cargado cuando `tipo_producto` es `'medicamento'`.
 
+**Actualización:** esta decisión fue revertida, ver sección 19.
+
 ## 6. Incorporación de `principio_activo` a `Medicamento`
 
 **Decisión:** agregar la columna `principio_activo` (NOT NULL) a `Medicamento`, ausente en una versión anterior del diseño.
@@ -122,6 +137,8 @@ Como `laboratorio` aplica siempre pero es más importante para medicamentos, se 
 **Justificación:** la Ley de Prescripción por Nombre Genérico obliga a que las recetas se emitan por el nombre del principio activo, no por la marca comercial, permitiendo al paciente elegir entre las alternativas comerciales disponibles. Sin este campo, el sistema no podía responder la pregunta '¿qué otros productos son intercambiables con este, por tener el mismo principio activo de distintos laboratorios?', que es exactamente el caso de uso que la ley exige poder resolver en el mostrador.
 
 A diferencia de `laboratorio`, no requiere `CHECK` condicional: todo medicamento, por definición, tiene un principio activo, así que es `NOT NULL` sin excepciones.
+
+**Actualización:** esta decisión fue revertida, ver sección 19.
 
 ## 7. `ClaseTerapeutica` y la relación N:M con `Medicamento`
 
@@ -165,7 +182,7 @@ Cardinalidad resultante: todo `Usuario` está asociado a un único `Empleado` (o
 
 **Decisión:** el medio de pago se modela como el campo `medio_pago` (VARCHAR con valores fijos: 'efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'qr') directamente en `Venta`, sin una tabla de catálogo separada.
 
-**Justificación:** es el mismo criterio aplicado a `tipo_producto`, `condicion_iva`, `rol` y `estado`: se trata de un conjunto de valores fijo, pequeño y estable, referenciado desde una única tabla (`Venta`). No existe la necesidad de sincronización entre múltiples tablas que sí justifica una tabla de catálogo aparte, como es el caso de `CategoriaCoberturaObraSocial` (referenciada desde `Medicamento` y `ReglaCobertura`). Agregar una tabla `MedioPago` para cinco valores que no cambian con frecuencia habría sumado una FK y un JOIN adicional en cada consulta de ventas, sin ningún beneficio real de mantenimiento.
+**Justificación:** es el mismo criterio aplicado a `tipo_producto`, `rol` y `estado`: se trata de un conjunto de valores fijo, pequeño y estable, referenciado desde una única tabla (`Venta`). (Ver sección 19 sobre por qué `condicion_iva`, que antes seguía este mismo criterio, pasó a ser una tabla de catálogo). No existe la necesidad de sincronización entre múltiples tablas que sí justifica una tabla de catálogo aparte, como es el caso de `CategoriaCoberturaObraSocial` (referenciada desde `Medicamento` y `ReglaCobertura`). Agregar una tabla `MedioPago` para cinco valores que no cambian con frecuencia habría sumado una FK y un JOIN adicional en cada consulta de ventas, sin ningún beneficio real de mantenimiento.
 
 ## 13. `Caja` y `MovimientoCaja`
 
@@ -217,6 +234,8 @@ Las tres excepciones son tablas cuyas filas no tienen sentido de existir sin su 
 
 En ningún caso se propaga a un historial (lotes, ventas, reglas de cobertura), porque esas relaciones no usan `CASCADE`. Además, en la práctica el `CASCADE` casi no se usa: las ventas no se eliminan sino que se anulan cambiando su `estado` a 'anulada', y los productos se dan de baja con `activo`. Queda como una protección de consistencia (por ejemplo, ante un producto cargado por error que todavía no tiene lotes ni ventas), no como un camino operativo habitual del sistema.
 
+**Actualización:** además, se agregó `ON DELETE RESTRICT` explícito en la FK `clase_terapeutica_id` de `medicamento_clase_terapeutica` (antes usaba el default sin declararlo). El comportamiento es el mismo (`NO ACTION` y `RESTRICT` actúan igual en PostgreSQL), pero queda documentado explícitamente en el DDL.
+
 ## 18. Proceso de validación del esquema
 
 Durante la implementación de los scripts .sql, se revisó cada CREATE TABLE contra su justificación documentada, detectando y corrigiendo:
@@ -228,4 +247,23 @@ Durante la implementación de los scripts .sql, se revisó cada CREATE TABLE con
 
 Esta revisión se hizo tabla por tabla antes de subir cada script al repositorio, como parte del flujo de trabajo colaborativo entre los dos integrantes del equipo.
 
-Como verificación final, se corrió el esquema completo contra una instancia real de PostgreSQL (`docker-compose down -v && docker-compose up --build`, forzando la recreación del volumen de datos), confirmando que las 15 tablas se crean correctamente en orden y sin errores de sintaxis ni de referencias entre sí.
+Como verificación final, se corrió el esquema completo contra una instancia real de PostgreSQL (`docker-compose down -v && docker-compose up --build`, forzando la recreación del volumen de datos), confirmando que las 19 tablas se crean correctamente en orden y sin errores de sintaxis ni de referencias entre sí.
+
+## 19. Corrección del tutor: de atributos de texto a tablas de catálogo
+
+**Decisión:** se revirtieron las decisiones de las secciones 5 y 6: `laboratorio` (en `Producto`) y `principio_activo` y `forma_farmaceutica` (en `Medicamento`) dejaron de ser columnas de texto libre y pasaron a ser claves foráneas hacia tablas de catálogo nuevas: `Laboratorio`, `PrincipioActivo` y `FormaFarmaceutica`. `condicion_iva` (en `Producto`), que ya era texto y se mencionaba en la sección 12 con el mismo criterio que `medio_pago`, tuvo el mismo tratamiento y pasó a `CondicionIva`.
+
+**Motivo del cambio:** un comentario del tutor sobre el diseño señaló que varios atributos de texto libre correspondían, en realidad, a catálogos con entidad propia, y pidió que se revisara caso por caso si convenía dejarlos como texto con validación o convertirlos en tabla.
+
+**Justificación por entidad:**
+
+- **`Laboratorio`**: si se escribe a mano, un mismo laboratorio puede cargarse de formas distintas ('Bagó', 'Laboratorios Bagó'), y una búsqueda o reporte devolvería resultados incompletos. Como tabla, el nombre se registra una vez y, si cambia la razón social, se corrige en un solo lugar. Mantiene baja lógica con `activo`, por la misma razón que otras tablas con historial asociado.
+- **`PrincipioActivo`**: es el dato que identifica qué productos son alternativas entre sí (mismo principio activo, distinto laboratorio). Con texto libre, 'Ibuprofeno' e 'ibuprofeno ' no coincidirían y esa búsqueda fallaría.
+- **`CondicionIva`**: la alícuota (21%, 10,5%, exento) es un dato con valor propio que puede cambiar por normativa; como tabla, se actualiza en un lugar y no en cada producto. El nombre de la condición se guarda una sola vez y `Producto` la referencia por clave, no por valor repetido.
+- **`FormaFarmaceutica`**: es un catálogo compartido (comprimido, jarabe, inyectable, crema, gotas, óvulo, supositorio, etc.) que puede crecer sin modificar la estructura de `Medicamento`, evitando variantes de escritura.
+
+**Lo que se mantuvo como texto:** `tipo_producto`, `medio_pago` y `estado` se revisaron con el mismo criterio pero se mantuvieron como columnas de texto con `CHECK`, porque son conjuntos de valores fijos, pequeños y estables que decide el propio sistema (no el usuario cargando datos a mano), y no hay riesgo de inconsistencia de escritura en un valor que el código controla, a diferencia de un nombre de laboratorio o de principio activo que sí se tipea libremente.
+
+Se aprovechó esta revisión para llevar al DDL dos validaciones que estaban documentadas pero no se habían implementado: el `CHECK` de `tipo_producto` en `producto` (con los valores `'medicamento'`, `'perfumeria'`, `'cuidado_personal'`, `'otro'`) y los `CHECK` de `medio_pago` y `estado` en `venta`.
+
+El DDL de las cuatro tablas nuevas está en `database/00_laboratorio.sql`, `database/00_principio_activo.sql`, `database/00_condicion_iva.sql` y `database/00_forma_farmaceutica.sql`, y corren antes que `03_producto.sql` y `07_medicamento.sql` por el prefijo `00_`, ya que estos últimos ahora dependen de ellas por clave foránea.
