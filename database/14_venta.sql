@@ -6,13 +6,15 @@ CREATE TABLE venta (
     cliente_id INT REFERENCES cliente(id_cliente),
     obra_social_id INT REFERENCES obra_social(id_obra_social),
     caja_id INT NOT NULL REFERENCES caja(id_caja),
-    medio_pago VARCHAR(20) NOT NULL,
+    medio_pago VARCHAR(20) NOT NULL
+        CHECK (medio_pago IN ('efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia', 'qr')),
     subtotal NUMERIC(10,2) NOT NULL,
     monto_cobertura NUMERIC(10,2) DEFAULT 0,
     monto_gravado NUMERIC(10,2) DEFAULT 0,
     monto_exento NUMERIC(10,2) DEFAULT 0,
     total_a_pagar NUMERIC(10,2) NOT NULL,
     receta_verificada BOOLEAN DEFAULT false,
-    estado VARCHAR(20) NOT NULL DEFAULT 'confirmada',
+    estado VARCHAR(20) NOT NULL DEFAULT 'confirmada'
+        CHECK (estado IN ('confirmada', 'anulada')),
     CHECK (obra_social_id IS NULL OR cliente_id IS NOT NULL)
 );
