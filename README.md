@@ -109,6 +109,7 @@ El análisis completo, con sus tres ejes y la tabla de riesgos con su mitigació
 - Facturación electrónica / integración con AFIP.
 - Gestión de compras a proveedores o reposición automática de stock.
 - Aplicación móvil nativa.
+- Trazabilidad detallada de ajustes manuales de stock y reversión automática al anular una venta: se permite corregir el stock manualmente y anular ventas, pero sin registro histórico de los ajustes ni reintegro automático del stock a los lotes de origen. Queda como extensión futura posible, ver [Gestión del Alcance](./docs/03-gestion-alcance.md).
 
 ---
 

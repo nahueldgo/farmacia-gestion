@@ -23,6 +23,12 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** confirma la venta con un medio de pago válido (efectivo, tarjeta de crédito, tarjeta de débito, transferencia o QR)
 **Entonces** el sistema registra la venta, descuenta el stock correspondiente y la incluye en el cierre de caja del día
 
+### Integridad transaccional del registro de una venta
+
+**Dado que** un empleado confirma una venta con una o más líneas de producto
+**Cuando** el sistema registra la operación
+**Entonces** la venta, sus líneas de detalle y el descuento de stock correspondiente se guardan como una única operación atómica; si cualquier paso falla, no queda ningún registro parcial
+
 ### Cálculo automático de copago
 
 **Dado que** existe una regla de cobertura configurada para la obra social/entidad del cliente
@@ -66,6 +72,8 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 - **Modo offline.** Se documenta como riesgo aceptado y como extensión futura (ver Análisis de Riesgos, Supuestos y Restricciones, y Decisiones de Arquitectura).
 - **Facturación electrónica / integración con AFIP.** Ver la restricción legal/normativa en Análisis de Riesgos, Supuestos y Restricciones.
 - **Integración con hardware específico y gestión de compras a proveedores.** Quedan fuera como parte de la reducción activa del alcance para llegar a los plazos de la cátedra (ver Análisis de Riesgos, Supuestos y Restricciones).
+- **Trazabilidad detallada de ajustes manuales de stock.** Se permite corregir directamente la cantidad de un lote desde la pantalla de stock (por ejemplo, ante rotura o error de carga), pero sin un registro histórico dedicado de quién hizo el ajuste, cuándo y por qué motivo. Queda como extensión futura posible.
+- **Reversión automática de stock al anular una venta.** Una venta puede pasar a estado "anulada", pero el reintegro del stock descontado al lote o los lotes de origen no se automatiza en esta versión. Queda como extensión futura posible.
 
 ## Criterio de éxito del proyecto
 
