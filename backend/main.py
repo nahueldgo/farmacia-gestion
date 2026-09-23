@@ -51,3 +51,19 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
 @app.get("/auth/me")
 def quien_soy(usuario: dict = Depends(obtener_usuario_actual)):
     return usuario
+
+@app.post("/auth/refresh", response_model=LoginResponse)
+def refrescar_token(
+    usuario: dict = Depends(obtener_usuario_actual),
+    session: Session = Depends(get_session),
+):
+    usuario_db = session.exec(
+        select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])
+    ).first()
+    if usuario_db is None:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    empleado = session.get(Empleado, usuario_db.empleado_id)
+    nuevo_token = crear_token(usuario["sub"], usuario["rol"])
+
+    return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=usuario["rol"])
