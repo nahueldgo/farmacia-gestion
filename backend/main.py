@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from db import get_session
 from models import Empleado, Usuario
 from security import crear_token, verificar_contrasena
+from dependencias import obtener_usuario_actual
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
@@ -46,3 +47,7 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
     token = crear_token(usuario.nombre_usuario, empleado.rol)
 
     return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)
+
+@app.get("/auth/me")
+def quien_soy(usuario: dict = Depends(obtener_usuario_actual)):
+    return usuario
