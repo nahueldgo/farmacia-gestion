@@ -28,4 +28,3 @@ def crear_token(nombre_usuario: str, rol: str) -> str:
 def leer_token(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITMO])
 
-

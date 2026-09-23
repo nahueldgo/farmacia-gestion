@@ -1,8 +1,48 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from db import get_session
+from models import Empleado, Usuario
+from security import crear_token, verificar_contrasena
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class LoginRequest(BaseModel):
+    nombreUsuario: str
+    contrasena: str
+
+class LoginResponse(BaseModel):
+    token: str
+    nombre: str
+    rol: str
 
 @app.get("/")
 def status():
     return {"status": "ok", "mensaje": "Backend funcionando"}
+
+@app.post("/auth/login", response_model=LoginResponse)
+def login(datos: LoginRequest, session: Session = Depends(get_session)):
+    mensaje_error = "Usuario o contraseña incorrectos"
+
+    usuario = session.exec(
+        select(Usuario).where(Usuario.nombre_usuario == datos.nombreUsuario)
+    ).first()
+
+    if usuario is None or not verificar_contrasena(datos.contrasena, usuario.contrasena_hash):
+        raise HTTPException(status_code=401, detail=mensaje_error)
+
+    empleado = session.get(Empleado, usuario.empleado_id)
+
+    token = crear_token(usuario.nombre_usuario, empleado.rol)
+
+    return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)

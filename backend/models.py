@@ -24,5 +24,5 @@ class Usuario(SQLModel, table=True):
     email: str = Field(unique=True)
     contrasena_hash: str
     activo: bool = True
-    fecha_creacion: Optional[datetime] = None
+    fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
     ultimo_login: Optional[datetime] = None
