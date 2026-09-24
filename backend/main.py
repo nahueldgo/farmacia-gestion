@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -45,6 +47,13 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
 
     empleado = session.get(Empleado, usuario.empleado_id)
 
+    if not usuario.activo or not empleado.activo:
+        raise HTTPException(status_code=401, detail=mensaje_error)
+
+    usuario.ultimo_login = datetime.now(timezone.utc).replace(tzinfo=None)
+    session.add(usuario)
+    session.commit()
+
     token = crear_token(usuario.nombre_usuario, empleado.rol)
 
     return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)
@@ -65,9 +74,13 @@ def refrescar_token(
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
     empleado = session.get(Empleado, usuario_db.empleado_id)
-    nuevo_token = crear_token(usuario["sub"], usuario["rol"])
 
-    return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=usuario["rol"])
+    if not usuario_db.activo or not empleado.activo:
+        raise HTTPException(status_code=401, detail="Usuario inactivo")
+
+    nuevo_token = crear_token(usuario_db.nombre_usuario, empleado.rol)
+
+    return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=empleado.rol)
 
 @app.get("/auth/solo-dueno")
 def solo_dueno(usuario: dict = Depends(requiere_rol("dueno"))):
