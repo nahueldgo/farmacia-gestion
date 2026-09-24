@@ -13,6 +13,7 @@ from dependencias import obtener_usuario_actual, requiere_rol
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
+# TEMPORAL: allow_origins="*" solo para desarrollo; restringir a los orígenes reales antes de desplegar.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -82,6 +83,7 @@ def refrescar_token(
 
     return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=empleado.rol)
 
+# Endpoint de PRUEBA para demostrar requiere_rol; eliminar cuando haya un endpoint real con rol o antes de desplegar.
 @app.get("/auth/solo-dueno")
 def solo_dueno(usuario: dict = Depends(requiere_rol("dueno"))):
     return {"mensaje": "Tenés acceso", "usuario": usuario}
