@@ -42,6 +42,22 @@ A pedido del tutor, se deja por escrito la justificación de dos decisiones tecn
 
 **Por qué Electron.** Dentro de la decisión ya tomada de que el cliente fuera de escritorio, Electron se eligió puntualmente porque reutiliza el mismo frontend React ya definido para el proyecto. Se descartaron dos alternativas: un framework de interfaz nativo distinto (como C#/.NET), que obligaría a rehacer el frontend, y un lenguaje nuevo (como Rust, que requeriría una alternativa como Tauri), que sumaría una curva de aprendizaje adicional a un cronograma que ya no tiene margen.
 
+## Autenticación y control de acceso (Módulo 1)
+
+Decisiones tomadas al construir el login y los permisos por rol, con la alternativa que se descartó en cada caso.
+
+**Token JWT en lugar de sesiones en el servidor.** El cliente es una aplicación de escritorio que consume una API separada alojada en la nube, por lo que un token firmado que el cliente presenta en cada pedido resulta más simple que mantener sesiones guardadas en el servidor. El costo aceptado es que un token ya emitido no se puede revocar antes de que venza; se compensa con una duración corta (60 minutos) y con el mecanismo de renovación descripto abajo.
+
+**Renovación simple del token.** El endpoint de renovación recibe un token vigente y devuelve uno nuevo, consultando en la base de datos el rol y el estado del usuario en ese momento, de modo que un cambio de rol o una baja se aplican en la siguiente renovación. Se descartó un refresh token separado y de larga duración porque suma piezas (almacenamiento, rotación, revocación) que exceden el alcance del TFI.
+
+**Baja lógica de empleados y usuarios.** Se marcan como inactivos (`activo`) en lugar de borrarlos, porque las ventas y los movimientos de caja los referencian y deben conservar la trazabilidad de quién los realizó. El login y la renovación del token rechazan a los inactivos.
+
+**Permisos por rol aplicados en el backend.** La restricción por rol se verifica en la API. El menú del frontend que oculta opciones según el rol es solo una ayuda visual: un usuario podría escribir una dirección a mano, por lo que la protección real tiene que estar donde están los datos.
+
+**Mismo mensaje de error ante usuario inexistente y contraseña incorrecta.** Se evita así revelar qué nombres de usuario existen en el sistema.
+
+**CORS abierto durante el desarrollo.** La API acepta pedidos de cualquier origen para facilitar las pruebas locales. Es un riesgo aceptado y temporal: debe restringirse a los orígenes reales antes del despliegue.
+
 ## Diseño extensible: patrón Strategy y extensiones futuras
 
 El cálculo de cobertura se construye detrás de una interfaz (patrón *Strategy*), de modo que el motor de reglas manual pueda convivir a futuro con validadores externos reales (ValidaCOFA, u otros propios de obras sociales grandes como Swiss Medical o Sancor Salud) sin rediseñar el resto del sistema. Esa integración requeriría que la farmacia esté homologada por cada entidad, y queda fuera del alcance de este TFI (ver [Gestión del Alcance](./03-gestion-alcance.md)). A nivel de base de datos, el gancho de esta extensibilidad es la columna `tipo_validacion` de `ObraSocial` (ver [Diseño de la Base de Datos](./05-diseno-de-base-de-datos.md)).

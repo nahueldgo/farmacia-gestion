@@ -193,8 +193,25 @@ Este README es un resumen del proyecto. El detalle está en la documentación de
 ```bash
 git clone https://github.com/nahueldgo/farmacia-gestion
 cd farmacia-gestion
+cp .env.example .env    # en Windows: copy .env.example .env
 docker-compose up --build
 ```
+
+Editá el `.env` y reemplazá `SECRET_KEY` por una clave propia (por ejemplo, generada con `python -c "import secrets; print(secrets.token_hex(32))"`). El `.env` no se sube al repositorio.
+
+Con el backend corriendo, cargá los usuarios de prueba en otra terminal:
+
+```bash
+docker-compose exec backend python seed.py
+```
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| admin | admin1234 | farmaceutico |
+| auxiliar | auxiliar1234 | auxiliar |
+| dueno | dueno1234 | dueno |
+
+Son solo para desarrollo. La API se puede probar en http://localhost:8000/docs.
 
 ### Frontend (modo desarrollo, en navegador)
 
@@ -216,15 +233,15 @@ npm run electron:build  # genera el instalador (.exe / .dmg / .AppImage)
 ### Backend manual (sin Docker)
 
 ```bash
+cp .env.example .env    # variables de entorno (desde la raíz del repositorio)
 cd backend
 python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload
-
-# Variables de entorno
-cp .env.example .env
 ```
+
+Sin Docker, el backend lee `DATABASE_URL` y `SECRET_KEY` de las variables de entorno del sistema (con Docker las define el `docker-compose.yml` a partir del `.env`), por lo que hay que definirlas antes de ejecutar `uvicorn`.
 
 ---
 
