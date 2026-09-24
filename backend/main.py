@@ -3,10 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+
 from db import get_session
 from models import Empleado, Usuario
 from security import crear_token, verificar_contrasena
-from dependencias import obtener_usuario_actual
+from dependencias import obtener_usuario_actual, requiere_rol
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
@@ -67,3 +68,8 @@ def refrescar_token(
     nuevo_token = crear_token(usuario["sub"], usuario["rol"])
 
     return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=usuario["rol"])
+
+@app.get("/auth/solo-dueno")
+def solo_dueno(usuario: dict = Depends(requiere_rol("dueno"))):
+    return {"mensaje": "Tenés acceso", "usuario": usuario}
+

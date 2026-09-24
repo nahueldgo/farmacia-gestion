@@ -4,12 +4,14 @@ import jwt
 
 from security import leer_token
 
-seguridad_bearer = HTTPBearer()
+seguridad_bearer = HTTPBearer(auto_error=False)
 
 
 def obtener_usuario_actual(
-    credenciales: HTTPAuthorizationCredentials = Depends(seguridad_bearer),
+    credenciales: HTTPAuthorizationCredentials | None = Depends(seguridad_bearer),
 ) -> dict:
+    if credenciales is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autenticado")
     token = credenciales.credentials
     try:
         return leer_token(token)
