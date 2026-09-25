@@ -3,6 +3,7 @@ CREATE TABLE obra_social (
     nombre VARCHAR(100) NOT NULL,
     cuit VARCHAR(15) UNIQUE,
     contacto VARCHAR(100),
-    tipo_validacion VARCHAR(20) NOT NULL DEFAULT 'manual',
+    tipo_validacion VARCHAR(20) NOT NULL DEFAULT 'manual'
+        CHECK (tipo_validacion IN ('manual', 'externa')),
     activo BOOLEAN DEFAULT true
-);  
+);

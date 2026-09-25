@@ -10,4 +10,5 @@ CREATE TABLE caja (
     monto_cierre_sistema NUMERIC(10,2),
     diferencia NUMERIC(10,2),
     estado VARCHAR(20) NOT NULL DEFAULT 'abierta'
+        CHECK (estado IN ('abierta', 'cerrada'))
 );
