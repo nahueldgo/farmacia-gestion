@@ -13,7 +13,7 @@ export const menuPorRol: Record<string, ItemMenu[]> = {
     { label: 'Configurar coberturas', path: '/coberturas' },
     { label: 'Caja', path: '/caja' },
   ],
-  'dueño': [
+  'dueno': [
     { label: 'Ventas', path: '/ventas' },
     { label: 'Stock', path: '/stock' },
     { label: 'Caja', path: '/caja' },
