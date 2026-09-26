@@ -10,8 +10,8 @@
 El PMO (Programa Médico Obligatorio) argentino fija pisos mínimos legales de cobertura que toda entidad debe cumplir, y que puede igualar o mejorar:
 
 - **40%** para medicamentos ambulatorios en general.
-- **70%** para enfermedades crónicas prevalentes (hipertensión, diabetes en comprimidos).
-- **100%** para categorías específicas como oncológicos, insulina, anticonceptivos (Ley 25.673), HIV y discapacidad (Ley 24.901).
+- **70%** para enfermedades crónicas prevalentes (por ejemplo, hipertensión).
+- **100%** para categorías específicas como oncológicos, diabetes (medicamentos e insulina, Ley 23.753), anticonceptivos (Ley 25.673), HIV y discapacidad (Ley 24.901).
 
 El sistema permite configurar estos porcentajes por categoría de medicamento y por entidad, ya que en la práctica varían según lo que cada obra social o mutual local decida ofrecer por encima del piso legal. Cómo se modela esto en la base de datos está en [Diseño de la Base de Datos](./05-diseno-de-base-de-datos.md) (`CategoriaCoberturaObraSocial` y `ReglaCobertura`).
 
