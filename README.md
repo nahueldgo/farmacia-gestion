@@ -139,17 +139,17 @@ Docker Compose se usa exclusivamente para levantar el backend y la base de datos
 
 **Inicio:** 07/09/2026. **Fin:** 14/11/2026.
 
-La división por Backend / Frontend / Conexión de cada etapa ya está armada en el [tablero de Trello](https://trello.com/b/xqg3934a/sistema-gestion-farmacia-tfi), donde cada módulo tiene sus tareas separadas y con fecha límite cargada. Las duraciones de abajo son estimaciones aproximadas (recién estamos arrancando y no tenemos tiempos reales medidos por tarea) que se van a ir ajustando a medida que avancemos.
+La división por Backend / Frontend / Conexión de cada etapa ya está armada en el [tablero de Trello](https://trello.com/b/xqg3934a/sistema-gestion-farmacia-tfi), donde cada módulo tiene sus tareas separadas y con fecha límite cargada. Las duraciones de abajo son estimaciones aproximadas (recién estamos arrancando y no tenemos tiempos reales medidos por tarea) que se van a ir ajustando a medida que avancemos. Las fechas de cada etapa se ajustaron por la modificación de tareas de cada módulo; algunas etapas se solapan (las etapas 3 y 4 entre el 12/10 y el 20/10) porque el backend y el frontend avanzan en paralelo.
 
 | Etapa | Fechas | Backend | Frontend | Conexión |
 |---|---|---|---|---|
 | **1. Setup + modelado de BD** | 07/09 - 13/09 | Config. FastAPI + Docker Compose + conexión a BD; diseño de esquema con diagramas UML y DDL inicial | Setup Vite + React + Tailwind, estructura de carpetas | Config. inicial de Electron apuntando al build de Vite |
-| **2. Usuarios y roles** | 14/09 - 27/09 | Endpoints login/JWT, modelo de usuario y roles | Pantalla de login, layout con navegación según rol | Login end-to-end probado |
-| **3. Ventas + catálogo/stock** | 28/09 - 11/10 | CRUD productos/lotes, lógica FEFO, endpoint de venta | Pantallas de stock/alertas, pantalla de venta de mostrador | Integración completa del flujo de venta |
-| **4. Motor de reglas de cobertura** | 12/10 - 25/10 | Modelo obra social + reglas, patrón Strategy, cálculo de copago | Configuración de obras sociales, integración en pantalla de venta | Testing incremental del cálculo, caso por caso |
-| **5. Cierre de caja** | 26/10 - 01/11 | Apertura/cierre, movimientos manuales, diferencias de arqueo | Pantalla de arqueo por medio de pago | N/A |
-| **6. Reportes** | 02/11 - 08/11 | Endpoints de estadísticas históricas | Pantallas de reportes | N/A |
-| **7. Testing, ajustes y documentación final** | 09/11 - 14/11 | Pruebas end-to-end, corrección de bugs, documentación final e informe | | |
+| **2. Usuarios y roles** | 14/09 - 28/09 | Endpoints login/JWT, modelo de usuario y roles, gestión de empleados y usuarios, datos iniciales del catálogo | Pantalla de login, layout con navegación según rol, pantalla de gestión de empleados | Login end-to-end probado |
+| **3. Ventas + catálogo/stock** | 29/09 - 20/10 | CRUD productos/lotes y catálogos, lógica FEFO, endpoint de venta de mostrador y anulación | Pantallas de stock/alertas, pantalla de venta de mostrador | Stock conectado y flujo de venta de mostrador de punta a punta |
+| **4. Motor de reglas de cobertura** | 12/10 - 30/10 | Modelo obra social + reglas por categoría, patrón Strategy, cálculo de copago e integración en la venta con cobertura | Configuración de obras sociales, integración en pantalla de venta | Cálculo de copago en tiempo real y venta completa con cobertura, testeada caso por caso |
+| **5. Cierre de caja** | 31/10 - 06/11 | Apertura/cierre, movimientos manuales, diferencias de arqueo | Pantalla de arqueo por medio de pago | Caja conectada al backend |
+| **6. Reportes** | 07/11 - 11/11 | Endpoints de estadísticas históricas | Pantallas de reportes | Reportes conectados al backend |
+| **7. Testing, ajustes y documentación final** | 12/11 - 14/11 | Despliegue del backend y de la base en la nube, pruebas end-to-end, corrección de bugs, documentación final e informe | Reintentos automáticos ante cortes de conexión | Instalador de escritorio apuntando al backend desplegado |
 
 ---
 
