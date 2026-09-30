@@ -50,7 +50,9 @@ Decisiones tomadas al construir el login y los permisos por rol, con la alternat
 
 **Renovación simple del token.** El endpoint de renovación recibe un token vigente y devuelve uno nuevo, consultando en la base de datos el rol y el estado del usuario en ese momento, de modo que un cambio de rol o una baja se aplican en la siguiente renovación. Se descartó un refresh token separado y de larga duración porque suma piezas (almacenamiento, rotación, revocación) que exceden el alcance del TFI.
 
-**Baja lógica de empleados y usuarios.** Se marcan como inactivos (`activo`) en lugar de borrarlos, porque las ventas y los movimientos de caja los referencian y deben conservar la trazabilidad de quién los realizó. El login y la renovación del token rechazan a los inactivos.
+**Baja lógica de empleados y usuarios.** Se marcan como inactivos (`activo`) en lugar de borrarlos, porque las ventas y los movimientos de caja los referencian y deben conservar la trazabilidad de quién los realizó. El login y la renovación del token rechazan a los inactivos. La baja desactiva a la vez al empleado y a su usuario: alcanzaría con uno solo para bloquear el login, pero conceptualmente ninguno de los dos sigue vigente cuando la persona deja de trabajar.
+
+**Alta de empleado y usuario en una sola transacción.** El endpoint que crea un empleado también crea su usuario, y las dos inserciones se confirman juntas (`flush` para obtener el ID del empleado sin cerrar la transacción, y un único `commit`). Si algo falla en el medio, no queda ni el empleado ni el usuario a medio crear.
 
 **Permisos por rol aplicados en el backend.** La restricción por rol se verifica en la API. El menú del frontend que oculta opciones según el rol es solo una ayuda visual: un usuario podría escribir una dirección a mano, por lo que la protección real tiene que estar donde están los datos.
 
