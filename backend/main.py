@@ -7,7 +7,11 @@ from sqlmodel import Session, select
 
 
 from db import get_session
-from models import Empleado, Usuario
+from models import (
+    Empleado, Usuario, Laboratorio, PrincipioActivo, CondicionIva,
+    FormaFarmaceutica, ClaseTerapeutica, CategoriaCoberturaObraSocial,
+)
+from schemas_catalogos import CondicionIvaRespuesta
 from security import crear_token, verificar_contrasena, hashear_contrasena
 from dependencias import obtener_usuario_actual, requiere_rol
 from roles import Rol
@@ -91,8 +95,7 @@ def solo_dueno(usuario: dict = Depends(requiere_rol("dueno"))):
     return {"mensaje": "Tenés acceso", "usuario": usuario}
 
 
-# Alta atomica: el empleado y su usuario se guardan en una sola transacción
-# (flush + un único commit). Si algo falla, no queda ni uno ni el otro.
+# Alta atómica: empleado y usuario en una sola transacción.
 @app.post("/empleados", response_model=EmpleadoRespuesta, status_code=201)
 def crear_empleado(
     datos: EmpleadoCrear,
@@ -192,8 +195,7 @@ def obtener_empleado(
         nombre_usuario=usuario_emp.nombre_usuario if usuario_emp else "",
         email=usuario_emp.email if usuario_emp else "",
     )
-# Desactiva tanto al empleado (legajo) como a su usuario (acceso), para que
-# el login lo bloquee y quede claro que ninguno de los dos sigue vigente.
+# Baja: desactiva al empleado y a su usuario juntos.
 @app.patch("/empleados/{id_empleado}/baja", response_model=EmpleadoRespuesta)
 def dar_de_baja_empleado(
     id_empleado: int,
@@ -299,4 +301,66 @@ def cambiar_contrasena_empleado(
         nombre_usuario=usuario_emp.nombre_usuario,
         email=usuario_emp.email,
     )
+# Catálogos para los selectores: los puede leer cualquier usuario logueado.
+@app.get("/catalogos/laboratorios", response_model=list[Laboratorio])
+def listar_laboratorios(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    # Solo activos.
+    return session.exec(
+        select(Laboratorio).where(Laboratorio.activo.is_(True)).order_by(Laboratorio.nombre)
+    ).all()
+
+
+@app.get("/catalogos/principios-activos", response_model=list[PrincipioActivo])
+def listar_principios_activos(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    return session.exec(select(PrincipioActivo).order_by(PrincipioActivo.nombre)).all()
+
+
+@app.get("/catalogos/condiciones-iva", response_model=list[CondicionIvaRespuesta])
+def listar_condiciones_iva(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    condiciones = session.exec(
+        select(CondicionIva).order_by(CondicionIva.id_condicion_iva)
+    ).all()
+    return [
+        CondicionIvaRespuesta(
+            id_condicion_iva=c.id_condicion_iva,
+            nombre=c.nombre,
+            alicuota=float(c.alicuota),
+        )
+        for c in condiciones
+    ]
+
+
+@app.get("/catalogos/formas-farmaceuticas", response_model=list[FormaFarmaceutica])
+def listar_formas_farmaceuticas(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    return session.exec(select(FormaFarmaceutica).order_by(FormaFarmaceutica.nombre)).all()
+
+
+@app.get("/catalogos/clases-terapeuticas", response_model=list[ClaseTerapeutica])
+def listar_clases_terapeuticas(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    return session.exec(select(ClaseTerapeutica).order_by(ClaseTerapeutica.nombre)).all()
+
+
+@app.get("/catalogos/categorias-cobertura", response_model=list[CategoriaCoberturaObraSocial])
+def listar_categorias_cobertura(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    return session.exec(
+        select(CategoriaCoberturaObraSocial).order_by(CategoriaCoberturaObraSocial.id_categoria_cobertura_obra_social)
+    ).all()
 
