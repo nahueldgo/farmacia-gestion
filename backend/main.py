@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 
 from db import get_session
@@ -11,7 +11,7 @@ from models import (
     Empleado, Usuario, Laboratorio, PrincipioActivo, CondicionIva,
     FormaFarmaceutica, ClaseTerapeutica, CategoriaCoberturaObraSocial,
 )
-from schemas_catalogos import CondicionIvaRespuesta
+from schemas_catalogos import CondicionIvaRespuesta, CatalogoCrear
 from security import crear_token, verificar_contrasena, hashear_contrasena
 from dependencias import obtener_usuario_actual, requiere_rol
 from roles import Rol
@@ -363,4 +363,51 @@ def listar_categorias_cobertura(
     return session.exec(
         select(CategoriaCoberturaObraSocial).order_by(CategoriaCoberturaObraSocial.id_categoria_cobertura_obra_social)
     ).all()
+# Alta de catálogos: la puede hacer cualquier rol operativo.
+ROLES_ALTA_CATALOGO = (Rol.FARMACEUTICO, Rol.AUXILIAR, Rol.DUENO)
+
+
+@app.post("/catalogos/laboratorios", response_model=Laboratorio, status_code=201)
+def crear_laboratorio(
+    datos: CatalogoCrear,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(requiere_rol(*ROLES_ALTA_CATALOGO)),
+):
+    nombre = datos.nombre.strip()
+    if not nombre:
+        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
+    # Duplicado sin importar mayúsculas ni espacios.
+    existente = session.exec(
+        select(Laboratorio).where(func.lower(Laboratorio.nombre) == nombre.lower())
+    ).first()
+    if existente:
+        raise HTTPException(status_code=409, detail="Ya existe un laboratorio con ese nombre")
+
+    laboratorio = Laboratorio(nombre=nombre)
+    session.add(laboratorio)
+    session.commit()
+    session.refresh(laboratorio)
+    return laboratorio
+
+
+@app.post("/catalogos/principios-activos", response_model=PrincipioActivo, status_code=201)
+def crear_principio_activo(
+    datos: CatalogoCrear,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(requiere_rol(*ROLES_ALTA_CATALOGO)),
+):
+    nombre = datos.nombre.strip()
+    if not nombre:
+        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
+    existente = session.exec(
+        select(PrincipioActivo).where(func.lower(PrincipioActivo.nombre) == nombre.lower())
+    ).first()
+    if existente:
+        raise HTTPException(status_code=409, detail="Ya existe un principio activo con ese nombre")
+
+    principio = PrincipioActivo(nombre=nombre)
+    session.add(principio)
+    session.commit()
+    session.refresh(principio)
+    return principio
 
