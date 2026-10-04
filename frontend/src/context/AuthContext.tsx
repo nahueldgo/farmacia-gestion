@@ -1,16 +1,17 @@
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type Rol = 'auxiliar' | 'farmaceutico' | 'dueno';
+export type Rol = 'auxiliar' | 'farmaceutico' | 'dueno';
 
 interface Usuario {
   nombre: string;
   rol: Rol;
+  token: string;
 }
 
 interface AuthContextType {
   usuario: Usuario | null;
-  login: (nombre: string, rol: Rol) => void;
+  login: (nombre: string, rol: Rol, token: string) => void;
   logout: () => void;
 }
 
@@ -19,8 +20,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
-  const login = (nombre: string, rol: Rol) => {
-    setUsuario({ nombre, rol });
+  const login = (nombre: string, rol: Rol, token: string) => {
+    setUsuario({ nombre, rol, token });
   };
 
   const logout = () => {

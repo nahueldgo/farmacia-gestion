@@ -1,27 +1,52 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import type { Rol } from '../context/AuthContext';
+import { API_URL } from '../config/api';
 
 export function Login() {
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
     if (!nombreUsuario || !contrasena) {
       setError('Completá usuario y contraseña');
       return;
     }
 
-    // SIMULACION: aca va a ir el fetch real al backend (POST /login)
-    // cuando el endpoint este listo. Por ahora, simulamos un login
-    // exitoso con un rol fijo para poder probar el resto de la app.
-    login(nombreUsuario, 'farmaceutico');
-    navigate('/');
+    setCargando(true);
+    try {
+      const respuesta = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombreUsuario, contrasena }),
+      });
+
+      if (respuesta.status === 401) {
+        setError('Usuario o contraseña incorrectos');
+        return;
+      }
+
+      if (!respuesta.ok) {
+        setError(`El servidor respondió con un error (${respuesta.status})`);
+        return;
+      }
+
+      const datos = await respuesta.json();
+      login(datos.nombre, datos.rol as Rol, datos.token);
+      navigate('/');
+    } catch {
+      setError('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setCargando(false);
+    }
   };
 
   return (
@@ -45,7 +70,9 @@ export function Login() {
 
         {error && <p style={{ color: 'red' }}>{error}</p>}
 
-        <button type="submit">Ingresar</button>
+        <button type="submit" disabled={cargando}>
+          {cargando ? 'Ingresando...' : 'Ingresar'}
+        </button>
       </form>
     </div>
   );
