@@ -33,3 +33,25 @@ INSERT INTO forma_farmaceutica (nombre) VALUES
     ('Aerosol'),
     ('Parche')
 ON CONFLICT (nombre) DO NOTHING;
+
+-- Clases terapeuticas mas comunes
+INSERT INTO clase_terapeutica (nombre) VALUES
+    ('Analgésico'),
+    ('Antiinflamatorio'),
+    ('Antibiótico'),
+    ('Antihipertensivo'),
+    ('Antidiabético'),
+    ('Antihistamínico'),
+    ('Antiácido y protector gástrico'),
+    ('Antidepresivo'),
+    ('Ansiolítico'),
+    ('Anticonceptivo'),
+    ('Antiviral'),
+    ('Antifúngico'),
+    ('Broncodilatador'),
+    ('Corticoide'),
+    ('Hipolipemiante'),
+    ('Anticoagulante'),
+    ('Diurético'),
+    ('Antiespasmódico')
+ON CONFLICT (nombre) DO NOTHING;
