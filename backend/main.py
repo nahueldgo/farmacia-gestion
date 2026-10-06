@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, select, func
+from routers.productos import router as productos_router
 
 
 from db import get_session
@@ -27,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(productos_router)
 
 class LoginRequest(BaseModel):
     nombreUsuario: str
@@ -410,4 +413,3 @@ def crear_principio_activo(
     session.commit()
     session.refresh(principio)
     return principio
-
