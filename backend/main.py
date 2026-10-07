@@ -4,8 +4,6 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlmodel import Session, select, func
-from routers.productos import router as productos_router
-
 
 from db import get_session
 from models import (
@@ -17,6 +15,8 @@ from security import crear_token, verificar_contrasena, hashear_contrasena
 from dependencias import obtener_usuario_actual, requiere_rol
 from roles import Rol
 from schemas_empleados import EmpleadoCrear, EmpleadoRespuesta, CambiarContrasena
+from routers.productos import router as productos_router
+from routers.medicamentos import router as medicamentos_router
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
@@ -30,6 +30,7 @@ app.add_middleware(
 )
 
 app.include_router(productos_router)
+app.include_router(medicamentos_router)
 
 class LoginRequest(BaseModel):
     nombreUsuario: str
