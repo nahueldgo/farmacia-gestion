@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from db import get_session
-from dependencias import obtener_usuario_actual, requiere_rol
+from dependencias import obtener_usuario_actual, obtener_usuario_para_cambio, requiere_rol
 from models import Empleado, Usuario
-from schemas_auth import LoginRequest, LoginResponse
-from security import crear_token, verificar_contrasena
+from schemas_auth import CambiarContrasenaPropia, LoginRequest, LoginResponse
+from security import crear_token, hashear_contrasena, verificar_contrasena
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -32,13 +32,18 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
     session.add(usuario)
     session.commit()
 
-    token = crear_token(usuario.nombre_usuario, empleado.rol)
+    token = crear_token(usuario.nombre_usuario, empleado.rol, usuario.debe_cambiar_contrasena)
 
-    return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)
+    return LoginResponse(
+        token=token,
+        nombre=empleado.nombre,
+        rol=empleado.rol,
+        debeCambiarContrasena=usuario.debe_cambiar_contrasena,
+    )
 
 
 @router.get("/me")
-def quien_soy(usuario: dict = Depends(obtener_usuario_actual)):
+def quien_soy(usuario: dict = Depends(obtener_usuario_para_cambio)):
     return usuario
 
 
@@ -58,9 +63,44 @@ def refrescar_token(
     if not usuario_db.activo or not empleado.activo:
         raise HTTPException(status_code=401, detail="Usuario inactivo")
 
-    nuevo_token = crear_token(usuario_db.nombre_usuario, empleado.rol)
+    nuevo_token = crear_token(usuario_db.nombre_usuario, empleado.rol, usuario_db.debe_cambiar_contrasena)
 
-    return LoginResponse(token=nuevo_token, nombre=empleado.nombre, rol=empleado.rol)
+    return LoginResponse(
+        token=nuevo_token,
+        nombre=empleado.nombre,
+        rol=empleado.rol,
+        debeCambiarContrasena=usuario_db.debe_cambiar_contrasena,
+    )
+
+
+# Cambio de contraseña propio: cualquier rol logueado, incluso con el cambio forzado pendiente.
+# Devuelve un token nuevo, ya sin la marca de cambio pendiente.
+@router.patch("/contrasena", response_model=LoginResponse)
+def cambiar_contrasena_propia(
+    datos: CambiarContrasenaPropia,
+    usuario: dict = Depends(obtener_usuario_para_cambio),
+    session: Session = Depends(get_session),
+):
+    usuario_db = session.exec(
+        select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])
+    ).first()
+    if usuario_db is None:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+    if not verificar_contrasena(datos.contrasena_actual, usuario_db.contrasena_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+    if datos.contrasena_actual == datos.contrasena_nueva:
+        raise HTTPException(status_code=400, detail="La contraseña nueva debe ser distinta de la actual")
+
+    usuario_db.contrasena_hash = hashear_contrasena(datos.contrasena_nueva)
+    usuario_db.debe_cambiar_contrasena = False
+    session.add(usuario_db)
+    session.commit()
+
+    empleado = session.get(Empleado, usuario_db.empleado_id)
+    token = crear_token(usuario_db.nombre_usuario, empleado.rol)
+
+    return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)
 
 
 # Endpoint de PRUEBA para demostrar requiere_rol; eliminar antes de desplegar.

@@ -5,6 +5,7 @@ CREATE TABLE usuario (
     email VARCHAR(100) UNIQUE NOT NULL,
     contrasena_hash VARCHAR(255) NOT NULL,
     activo BOOLEAN DEFAULT true,
+    debe_cambiar_contrasena BOOLEAN NOT NULL DEFAULT false,
     fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
     ultimo_login TIMESTAMP
 );

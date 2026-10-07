@@ -19,9 +19,9 @@ def verificar_contrasena(contrasena: str, contrasena_hash: str) -> bool:
     return password_hash.verify(contrasena, contrasena_hash)
 
 
-def crear_token(nombre_usuario: str, rol: str) -> str:
+def crear_token(nombre_usuario: str, rol: str, debe_cambiar: bool = False) -> str:
     vencimiento = datetime.now(timezone.utc) + timedelta(minutes=MINUTOS_DE_VIDA)
-    datos = {"sub": nombre_usuario, "rol": rol, "exp": vencimiento}
+    datos = {"sub": nombre_usuario, "rol": rol, "cambiar": debe_cambiar, "exp": vencimiento}
     return jwt.encode(datos, SECRET_KEY, algorithm=ALGORITMO)
 
 
