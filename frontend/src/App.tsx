@@ -2,10 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { Layout } from './components/Layout';
+import { CambiarContrasena } from './pages/CambiarContrasena';
 
 function RutaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuth();
   if (!usuario) return <Navigate to="/login" replace />;
+  if (usuario.debeCambiarContrasena) return <Navigate to="/cambiar-contrasena" replace />;
   return <>{children}</>;
 }
 
@@ -20,6 +22,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/cambiar-contrasena" element={<CambiarContrasena />} />
       <Route
         path="/"
         element={
