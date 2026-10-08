@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { Layout } from './components/Layout';
 import { CambiarContrasena } from './pages/CambiarContrasena';
+import { Empleados } from './pages/Empleados';
 
 function RutaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuth();
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="coberturas" element={<Coberturas />} />
         <Route path="caja" element={<Caja />} />
         <Route path="reportes" element={<Reportes />} />
+        <Route path="empleados" element={<Empleados />} />
       </Route>
     </Routes>
   );
