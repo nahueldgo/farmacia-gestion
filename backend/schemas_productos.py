@@ -23,6 +23,7 @@ class ProductoRespuesta(BaseModel):
     tipo_producto: str
     stock_minimo: int
     activo: bool
+    stock: int = 0
 
 
 class ProductoEditar(BaseModel):
