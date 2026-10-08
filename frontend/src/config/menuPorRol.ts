@@ -19,5 +19,6 @@ export const menuPorRol: Record<string, ItemMenu[]> = {
     { label: 'Stock', path: '/stock' },
     { label: 'Caja', path: '/caja' },
     { label: 'Reportes', path: '/reportes' },
+    { label: 'Empleados', path: '/empleados' },
   ],
 };
