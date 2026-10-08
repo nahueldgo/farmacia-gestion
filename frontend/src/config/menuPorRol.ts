@@ -4,8 +4,9 @@ export interface ItemMenu {
 }
 
 export const menuPorRol: Record<string, ItemMenu[]> = {
-  auxiliar: [
+    auxiliar: [
     { label: 'Ventas', path: '/ventas' },
+    { label: 'Stock', path: '/stock' },
   ],
   farmaceutico: [
     { label: 'Ventas', path: '/ventas' },
