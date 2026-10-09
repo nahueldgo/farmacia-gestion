@@ -42,9 +42,22 @@ A pedido del tutor, se deja por escrito la justificación de dos decisiones tecn
 
 **Por qué Electron.** Dentro de la decisión ya tomada de que el cliente fuera de escritorio, Electron se eligió puntualmente porque reutiliza el mismo frontend React ya definido para el proyecto. Se descartaron dos alternativas: un framework de interfaz nativo distinto (como C#/.NET), que obligaría a rehacer el frontend, y un lenguaje nuevo (como Rust, que requeriría una alternativa como Tauri), que sumaría una curva de aprendizaje adicional a un cronograma que ya no tiene margen.
 
+## Diseño extensible: patrón Strategy y extensiones futuras
+
+El cálculo de cobertura se construye detrás de una interfaz (patrón *Strategy*), de modo que el motor de reglas manual pueda convivir a futuro con validadores externos reales (ValidaCOFA, u otros propios de obras sociales grandes como Swiss Medical o Sancor Salud) sin rediseñar el resto del sistema. Esa integración requeriría que la farmacia esté homologada por cada entidad, y queda fuera del alcance de este TFI (ver [Gestión del Alcance](./03-gestion-alcance.md)). A nivel de base de datos, el gancho de esta extensibilidad es la columna `tipo_validacion` de `ObraSocial` (ver [Diseño de la Base de Datos](./05-diseno-de-base-de-datos.md)).
+
+La misma separación entre lógica de negocio y persistencia deja abiertas otras dos extensiones, ninguna de las cuales forma parte del alcance de este TFI:
+
+- **Asistente basado en IA.** A partir del historial de ventas y el stock con trazabilidad de vencimientos, informaría o sugeriría compras a droguerías, y alertaría cuando los medicamentos ingresados en un período determinado estén próximos a vencer (para gestionar a tiempo su devolución al proveedor o su descarte correcto según los protocolos de residuos farmacéuticos). No automatizaría la compra ni reemplazaría la decisión del farmacéutico/a.
+- **Frontend web para clientes.** Permitiría hacer compras online reutilizando el mismo backend.
+
+## Convenciones de la API
+
+**Nombres de los campos.** Todo usa `snake_case`, igual que las columnas de la base. La única excepción es el login (`nombreUsuario` y `debeCambiarContrasena`), que se definió primero junto con el frontend. Cambiarlo cuando ya funcionaba rompería lo que está andando, así que la unificación queda planificada antes del despliegue y en tres pasos: el backend acepta las dos versiones, el frontend pasa a los nombres con guion bajo y después se eliminan los viejos.
+
 ## Autenticación y control de acceso (Módulo 1)
 
-Decisiones tomadas al construir el login y los permisos por rol, con la alternativa que se descartó en cada caso.
+Decisiones tomadas al construir el login, la gestión de empleados y los permisos por rol, con la alternativa que se descartó en cada caso.
 
 **Token JWT en lugar de sesiones en el servidor.** El cliente es una aplicación de escritorio que consume una API separada alojada en la nube, por lo que un token firmado que el cliente presenta en cada pedido resulta más simple que mantener sesiones guardadas en el servidor. El costo aceptado es que un token ya emitido no se puede revocar antes de que venza; se compensa con una duración corta (60 minutos) y con el mecanismo de renovación descripto abajo.
 
@@ -60,11 +73,42 @@ Decisiones tomadas al construir el login y los permisos por rol, con la alternat
 
 **CORS abierto durante el desarrollo.** La API acepta pedidos de cualquier origen para facilitar las pruebas locales. Es un riesgo aceptado y temporal: debe restringirse a los orígenes reales antes del despliegue.
 
-## Diseño extensible: patrón Strategy y extensiones futuras
+**Edición de empleados con límites.** El dueño puede corregir nombre, apellido, rol, email, matrícula y fecha de ingreso, enviando solo lo que cambia. No se pueden editar el DNI ni el nombre de usuario: identifican a la persona y a su acceso, y las ventas y los movimientos de caja los referencian, así que cambiarlos rompería la trazabilidad de quién hizo cada operación. El email vive en el usuario y no puede repetirse con el de otro.
 
-El cálculo de cobertura se construye detrás de una interfaz (patrón *Strategy*), de modo que el motor de reglas manual pueda convivir a futuro con validadores externos reales (ValidaCOFA, u otros propios de obras sociales grandes como Swiss Medical o Sancor Salud) sin rediseñar el resto del sistema. Esa integración requeriría que la farmacia esté homologada por cada entidad, y queda fuera del alcance de este TFI (ver [Gestión del Alcance](./03-gestion-alcance.md)). A nivel de base de datos, el gancho de esta extensibilidad es la columna `tipo_validacion` de `ObraSocial` (ver [Diseño de la Base de Datos](./05-diseno-de-base-de-datos.md)).
+**Matrícula obligatoria para el farmacéutico.** Un empleado con rol farmacéutico necesita matrícula profesional, porque en una farmacia es el profesional responsable: dirige el establecimiento como director técnico, está presente en el despacho de los medicamentos que requieren receta, y firma y archiva la documentación de los productos de venta controlada (recetas de estupefacientes y psicotrópicos, libro recetario y pedidos). Para el auxiliar y el dueño la matrícula es opcional: no ejercen como profesional responsable de la farmacia, así que no tienen una matrícula que cargar. El sistema no cubre el recetario ni los libros de control, que quedan fuera del alcance de este TFI. La regla se controla sobre el resultado final y no solo sobre lo que se envía: cambiar un rol a farmacéutico sin matrícula se rechaza, y también quitarle la matrícula a quien ya lo es.
 
-La misma separación entre lógica de negocio y persistencia deja abiertas otras dos extensiones, ninguna de las cuales forma parte del alcance de este TFI:
+**Varios dueños, con protección.** Puede haber más de un dueño, y un dueño puede crear a otro. Nadie puede darse de baja ni cambiarse el rol a sí mismo, y nunca puede quedar el sistema sin un dueño activo. Se descartó permitir la baja propia: un solo clic dejaría al sistema sin quien administre a los empleados, y desde el propio sistema no habría forma de recuperarlo. La última regla cubre además el caso de un token todavía vigente de un dueño ya dado de baja.
 
-- **Asistente basado en IA.** A partir del historial de ventas y el stock con trazabilidad de vencimientos, informaría o sugeriría compras a droguerías, y alertaría cuando los medicamentos ingresados en un período determinado estén próximos a vencer (para gestionar a tiempo su devolución al proveedor o su descarte correcto según los protocolos de residuos farmacéuticos). No automatizaría la compra ni reemplazaría la decisión del farmacéutico/a.
-- **Frontend web para clientes.** Permitiría hacer compras online reutilizando el mismo backend.
+**Reglas de contraseña.** Mínimo de 8 caracteres en el alta, en el reseteo y en el cambio propio. El cambio propio pide la contraseña actual, para que no pueda cambiarla alguien que encuentre la sesión abierta, y exige que la nueva sea distinta, para que el cambio forzado no se pueda cumplir repitiendo la misma. No hay recuperación de contraseña por mail: requeriría un servicio de envío de correo y códigos con vencimiento, y queda como mejora futura; si alguien la olvida, el dueño se la resetea.
+
+**Cambio forzado en el primer ingreso.** Los empleados que da de alta el dueño, y los que este resetea, usan una contraseña que eligió otra persona, así que deben cambiarla al entrar. Una columna en el usuario (`debe_cambiar_contrasena`) lo marca; el token lleva esa marca, y mientras esté activa el backend responde 403 en todo salvo en la consulta de la sesión y en el cambio de contraseña, que devuelve un token nuevo ya habilitado. Se descartó confiar solo en la pantalla del frontend: el bloqueo real tiene que estar donde están los datos. El costo es una columna nueva en la base, que obliga a recrearla o a agregarla a mano. Los usuarios de prueba no tienen la marca.
+
+**Primer dueño real con un script.** Para no depender de los usuarios de prueba en producción, `crear_dueno.py` pide los datos por consola y crea al primer dueño. La contraseña se escribe sin que se vea y no queda en ningún archivo ni en el repositorio, y el propio dueño la elige en ese momento, por eso no se le fuerza el cambio. Se descartó dejar un dueño con contraseña fija en el `seed.py`, que quedaría conocida por cualquiera que lea el repositorio.
+
+**Permisos del módulo.** La gestión de empleados (alta, edición, baja, reactivación y reseteo de la contraseña de otros) es solo del dueño, porque es quien administra al personal. El cambio de la contraseña propia lo usan los tres roles.
+
+## Productos, lotes y stock (Módulo 2)
+
+Decisiones tomadas al construir el catálogo, los lotes y el stock, con la alternativa que se descartó en cada caso.
+
+**El stock se calcula a partir de los lotes.** El stock de un producto es la suma de las cantidades de sus lotes que todavía no vencieron; no se guarda como un número aparte, así que no puede quedar desfasado respecto de los lotes. Se descartó una columna `stock` en el producto, que habría que mantener sincronizada con cada alta, ajuste y venta. Un lote vencido no cuenta como stock vendible, y uno que vence hoy sí cuenta durante todo el día.
+
+**Un lote por producto y número de lote.** Cada llegada de mercadería se carga como un lote (número, vencimiento y cantidad) del producto ya cargado en el catálogo. El número no se repite dentro del mismo producto, y no se carga un lote ya vencido; al corregirlo sí se acepta cualquier fecha, para poder arreglar un error de tipeo. No se registra el pedido ni el remito a la droguería, que queda fuera del alcance.
+
+**Ajuste y retiro sin borrar.** La cantidad de un lote se corrige indicando la que queda (no la diferencia) y el retiro la deja en 0. El lote nunca se borra, porque las ventas lo referencian. No hay tabla de movimientos de stock: el histórico es aproximado, como se decidió al diseñar la base.
+
+**FEFO como función reutilizable.** La elección del lote a descontar (primero el que vence antes, ignorando los vencidos y los agotados) es una función que no confirma la transacción, para que la venta la use dentro de la suya y se guarde todo junto o nada. Bloquea las filas de los lotes elegidos mientras dura la transacción, para que dos ventas simultáneas no descuenten el mismo stock. Se descartó un endpoint de descuento aparte, que dejaría la venta y el stock en operaciones separadas.
+
+**Alertas calculadas al consultarlas.** El stock bajo (por debajo del mínimo) y los vencimientos (lotes vencidos o que vencen en los próximos N días, 30 por defecto) se calculan en cada consulta. Se descartó una tabla de alertas guardadas, que habría que mantener actualizada.
+
+**La fecha de "hoy" se calcula en hora de Argentina.** Las reglas que dependen de la fecha (rechazar el alta de un lote vencido, contar el stock vendible, elegir lotes por FEFO y marcar alertas) usan una función `hoy()` basada en la zona `America/Argentina/Buenos_Aires`. Los servidores trabajan en UTC, 3 horas adelantados: entre las 21:00 y las 24:00 de Argentina ya marcarían el día siguiente y tratarían como vencido un lote que todavía se puede vender ese día. Se descartó cambiar la zona del contenedor, porque no se aplicaría en la nube, y sumar 3 horas fijas, que deja un número escrito a mano. Como Windows no trae la base de zonas horarias, se agrega el paquete `tzdata` a `requirements.txt`.
+
+**Un único precio vigente por producto.** El precio vive en el producto y se cambia con la edición, producto por producto, solo por el farmacéutico y siempre mayor a 0. Las ventas ya hechas no cambian, porque el detalle de cada venta guarda el precio del momento; los reportes de facturación se calculan con ese precio y no con el actual. Se descartó una tabla de historial de precios, que queda como extensión futura, igual que la actualización masiva por porcentaje, por laboratorio o por tipo de producto.
+
+**Medicamento como especialización del producto, con reglas propias.** Los datos de medicamento (principio activo, concentración, forma farmacéutica, si requiere receta, categoría de cobertura y clases terapéuticas) se cargan aparte del producto y solo para productos de tipo medicamento. Un medicamento exige laboratorio, y un producto que ya tiene datos de medicamento no puede cambiar de tipo, para no dejar datos huérfanos. Las clases terapéuticas se reemplazan como lista completa al editar, en lugar de agregarse o quitarse de a una, para que el resultado sea siempre el que mandó la pantalla.
+
+**Baja lógica de productos y laboratorios.** Igual que con los empleados, se marcan como inactivos en lugar de borrarlos, porque las ventas los referencian. Un laboratorio dado de baja deja de ofrecerse y no se usa en productos nuevos, pero los productos que ya lo tenían lo conservan. El farmacéutico puede listar también los productos dados de baja (`?incluir_inactivos=true`) para poder reactivarlos.
+
+**Carga de catálogos.** Los laboratorios y los principios activos se dan de alta desde el sistema, y pueden hacerlo los tres roles porque cualquiera puede encontrarse con uno nuevo al cargar mercadería. Las 18 clases terapéuticas, las condiciones de IVA, las formas farmacéuticas y las categorías del PMO vienen precargadas en los datos iniciales y no tienen alta.
+
+**Permisos del módulo.** Ver catálogos, productos, medicamentos y stock: los tres roles. Cargar productos, datos de medicamento y lotes: farmacéutico y auxiliar, porque el auxiliar recibe la mercadería de la droguería. Corregir o editar lo ya cargado (incluido el precio), dar de baja, ajustar o retirar lotes, ver las alertas y los productos dados de baja: solo el farmacéutico, porque es el profesional responsable de la farmacia y esas acciones modifican el stock y el catálogo de los que responde; por ejemplo, retirar un lote vencido para que no se venda. El dueño solo consulta.
