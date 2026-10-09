@@ -87,10 +87,16 @@ def crear_producto(
 @router.get("", response_model=list[ProductoRespuesta])
 def listar_productos(
     buscar: Optional[str] = None,
+    incluir_inactivos: bool = False,
     session: Session = Depends(get_session),
     usuario: dict = Depends(obtener_usuario_actual),
 ):
-    consulta = select(Producto).where(Producto.activo.is_(True))
+    # Ver también los dados de baja es solo del farmacéutico: los necesita para reactivarlos.
+    if incluir_inactivos and usuario.get("rol") not in ROLES_EDICION_PRODUCTO:
+        raise HTTPException(status_code=403, detail="Solo el farmacéutico puede ver los productos dados de baja")
+    consulta = select(Producto)
+    if not incluir_inactivos:
+        consulta = consulta.where(Producto.activo.is_(True))
     if buscar:
         # Búsqueda por parte del nombre, sin distinguir mayúsculas.
         consulta = consulta.where(Producto.nombre.ilike(f"%{buscar.strip()}%"))
