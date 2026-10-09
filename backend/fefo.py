@@ -1,7 +1,6 @@
-from datetime import date
-
 from sqlmodel import Session, select
 
+from fechas import hoy
 from models import Lote
 
 
@@ -25,7 +24,7 @@ def elegir_lotes(
         .where(
             Lote.producto_id == id_producto,
             Lote.cantidad > 0,
-            Lote.fecha_vencimiento >= date.today(),
+            Lote.fecha_vencimiento >= hoy(),
         )
         .order_by(Lote.fecha_vencimiento, Lote.id_lote)
     )

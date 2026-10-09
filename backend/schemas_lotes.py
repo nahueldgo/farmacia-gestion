@@ -3,6 +3,8 @@ from typing import Annotated, Optional
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
+from fechas import hoy
+
 NumeroLote = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 
 
@@ -15,7 +17,7 @@ class LoteCrear(BaseModel):
     @field_validator("fecha_vencimiento")
     @classmethod
     def no_vencido(cls, valor: date) -> date:
-        if valor < date.today():
+        if valor < hoy():
             raise ValueError("No se puede cargar un lote ya vencido")
         return valor
 

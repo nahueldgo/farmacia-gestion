@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 from typing import Optional
 
@@ -7,6 +6,7 @@ from sqlmodel import Session, select, func
 
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
+from fechas import hoy
 from models import Producto, Laboratorio, CondicionIva, Medicamento, Lote
 from roles import Rol
 from schemas_productos import ProductoCrear, ProductoEditar, ProductoRespuesta
@@ -25,7 +25,7 @@ def _stock_de(session: Session, ids: list[int]) -> dict[int, int]:
         return {}
     filas = session.exec(
         select(Lote.producto_id, func.sum(Lote.cantidad))
-        .where(Lote.producto_id.in_(ids), Lote.fecha_vencimiento >= date.today())
+        .where(Lote.producto_id.in_(ids), Lote.fecha_vencimiento >= hoy())
         .group_by(Lote.producto_id)
     ).all()
     return {producto_id: int(total) for producto_id, total in filas}
