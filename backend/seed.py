@@ -1,8 +1,7 @@
-from datetime import date
-
 from sqlmodel import Session, select
 
 from db import engine
+from fechas import hoy
 from models import Empleado, Usuario
 from security import hashear_contrasena
 
@@ -49,7 +48,7 @@ def cargar_usuario(session: Session, datos: dict):
             apellido=datos["apellido"],
             dni=datos["dni"],
             rol=datos["rol"],
-            fecha_ingreso=date.today(),
+            fecha_ingreso=hoy(),
         )
         session.add(empleado)
         session.commit()

@@ -1,9 +1,9 @@
-from datetime import date
 from getpass import getpass
 
 from sqlmodel import Session, select
 
 from db import engine
+from fechas import hoy
 from models import Empleado, Usuario
 from roles import Rol
 from security import hashear_contrasena
@@ -48,7 +48,7 @@ def crear_dueno():
             apellido=apellido,
             dni=dni,
             rol=Rol.DUENO.value,
-            fecha_ingreso=date.today(),
+            fecha_ingreso=hoy(),
         )
         session.add(empleado)
         session.flush()  # asigna id_empleado sin cerrar la transacción
