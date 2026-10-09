@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { FormularioEmpleado } from '../components/FormularioEmpleado';
 
 interface Empleado {
   id_empleado: number;
@@ -31,6 +32,7 @@ export function Empleados() {
   const [errorAccion, setErrorAccion] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [enProceso, setEnProceso] = useState<number | null>(null);
+  const [mostrarAlta, setMostrarAlta] = useState(false);
 
   // Cambio de contraseña
   const [aCambiar, setACambiar] = useState<Empleado | null>(null);
@@ -145,6 +147,30 @@ export function Empleados() {
       <h2>Empleados</h2>
       {mensaje && <p style={{ color: 'green' }}>{mensaje}</p>}
       {errorAccion && <p style={{ color: 'crimson' }}>{errorAccion}</p>}
+
+      {!mostrarAlta && (
+        <button
+          onClick={() => {
+            setMostrarAlta(true);
+            setMensaje('');
+            setErrorAccion('');
+          }}
+        >
+          Nuevo empleado
+        </button>
+      )}
+      {mostrarAlta && (
+        <FormularioEmpleado
+          token={token}
+          alCancelar={() => setMostrarAlta(false)}
+          alCrear={(nombre) => {
+            setMostrarAlta(false);
+            setMensaje(`Empleado ${nombre} creado. Deberá cambiar su contraseña en su primer ingreso.`);
+            cargar();
+          }}
+        />
+      )}
+
       <table>
         <thead>
           <tr>
