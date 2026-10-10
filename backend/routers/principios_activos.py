@@ -2,13 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlmodel import Session, func, select
 
 from db import get_session
-from dependencias import requiere_rol
+from dependencias import obtener_usuario_actual, requiere_rol
 from models import Medicamento, PrincipioActivo
 from roles import Rol
 from schemas_catalogos import CatalogoCrear
 
 router = APIRouter(prefix="/catalogos/principios-activos", tags=["principios activos"])
 
+# El alta la puede hacer cualquier rol operativo.
+ROLES_ALTA_PRINCIPIO = (Rol.FARMACEUTICO, Rol.AUXILIAR, Rol.DUENO)
 ROLES_EDICION_PRINCIPIO = (Rol.FARMACEUTICO,)
 
 
@@ -16,6 +18,36 @@ def _buscar_principio(session: Session, id_principio_activo: int) -> PrincipioAc
     principio = session.get(PrincipioActivo, id_principio_activo)
     if principio is None:
         raise HTTPException(status_code=404, detail="Principio activo no encontrado")
+    return principio
+
+
+@router.get("", response_model=list[PrincipioActivo])
+def listar_principios_activos(
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    return session.exec(select(PrincipioActivo).order_by(PrincipioActivo.nombre)).all()
+
+
+@router.post("", response_model=PrincipioActivo, status_code=201)
+def crear_principio_activo(
+    datos: CatalogoCrear,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(requiere_rol(*ROLES_ALTA_PRINCIPIO)),
+):
+    nombre = datos.nombre.strip()
+    if not nombre:
+        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
+    existente = session.exec(
+        select(PrincipioActivo).where(func.lower(PrincipioActivo.nombre) == nombre.lower())
+    ).first()
+    if existente:
+        raise HTTPException(status_code=409, detail="Ya existe un principio activo con ese nombre")
+
+    principio = PrincipioActivo(nombre=nombre)
+    session.add(principio)
+    session.commit()
+    session.refresh(principio)
     return principio
 
 
