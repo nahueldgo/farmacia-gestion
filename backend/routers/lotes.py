@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, select
 
 from db import get_session
@@ -29,6 +30,18 @@ def _buscar_lote(session: Session, id_lote: int) -> Lote:
     return lote
 
 
+# Si dos pedidos repiten el número a la vez, el índice único de la base lo rechaza.
+def _guardar_lote(session: Session, lote: Lote) -> Lote:
+    session.add(lote)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail="Ya existe un lote con ese número para este producto")
+    session.refresh(lote)
+    return lote
+
+
 @router.post("/productos/{id_producto}/lotes", response_model=LoteRespuesta, status_code=201)
 def crear_lote(
     id_producto: int,
@@ -54,10 +67,7 @@ def crear_lote(
         fecha_vencimiento=datos.fecha_vencimiento,
         cantidad=datos.cantidad,
     )
-    session.add(lote)
-    session.commit()
-    session.refresh(lote)
-    return lote
+    return _guardar_lote(session, lote)
 
 
 @router.get("/productos/{id_producto}/lotes", response_model=list[LoteRespuesta])
@@ -101,10 +111,7 @@ def corregir_lote(
 
     for campo, valor in cambios.items():
         setattr(lote, campo, valor)
-    session.add(lote)
-    session.commit()
-    session.refresh(lote)
-    return lote
+    return _guardar_lote(session, lote)
 
 
 # Ajuste manual: se manda la cantidad que queda, no la diferencia.
