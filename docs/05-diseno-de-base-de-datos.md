@@ -208,6 +208,10 @@ Cardinalidad resultante: todo `Usuario` está asociado a un único `Empleado` (o
 
 **Justificación:** la trazabilidad de stock por vencimiento (FEFO) aplica a cualquier tipo de producto, no solo a medicamentos: un jabón o un termómetro también tienen lotes y, potencialmente, fecha de vencimiento o control de partidas. Atar `Lote` a `Medicamento` excluiría injustificadamente al resto del catálogo de la gestión de stock.
 
+**Decisión:** el número de lote no se repite dentro del mismo producto, sin distinguir mayúsculas. La tabla lo garantiza con un índice único sobre `(producto_id, LOWER(numero_lote))`.
+
+**Justificación:** como cada línea de venta guarda de qué lote salió el producto, dos lotes con el mismo número en un producto harían ambigua la trazabilidad. El código del backend ya lo controla, pero con dos pedidos simultáneos podría pasar el control a la vez; el índice único lo garantiza en la base misma. No se pone `UNIQUE (producto_id, numero_lote)` simple porque distinguiría `L-01` de `l-01`, que en la práctica es el mismo lote impreso en el envase.
+
 ## 16. Resumen: entidades asociativas (relaciones N:M)
 
 El modelo tiene tres relaciones N:M reales del dominio, cada una resuelta con su propia entidad asociativa:
