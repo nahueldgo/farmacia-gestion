@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, func, select
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
 
+from comun import nombre_limpio, obtener_o_404, verificar_nombre_libre
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import Laboratorio
@@ -15,10 +16,7 @@ ROLES_EDICION_LABORATORIO = (Rol.FARMACEUTICO,)
 
 
 def _buscar_laboratorio(session: Session, id_laboratorio: int) -> Laboratorio:
-    laboratorio = session.get(Laboratorio, id_laboratorio)
-    if laboratorio is None:
-        raise HTTPException(status_code=404, detail="Laboratorio no encontrado")
-    return laboratorio
+    return obtener_o_404(session, Laboratorio, id_laboratorio, "Laboratorio no encontrado")
 
 
 # Para el selector: solo los activos, y los puede leer cualquier usuario logueado.
@@ -38,15 +36,10 @@ def crear_laboratorio(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_ALTA_LABORATORIO)),
 ):
-    nombre = datos.nombre.strip()
-    if not nombre:
-        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
-    # Duplicado sin importar mayúsculas ni espacios.
-    existente = session.exec(
-        select(Laboratorio).where(func.lower(Laboratorio.nombre) == nombre.lower())
-    ).first()
-    if existente:
-        raise HTTPException(status_code=409, detail="Ya existe un laboratorio con ese nombre")
+    nombre = nombre_limpio(datos.nombre)
+    verificar_nombre_libre(
+        session, Laboratorio, Laboratorio.id_laboratorio, nombre, "Ya existe un laboratorio con ese nombre"
+    )
 
     laboratorio = Laboratorio(nombre=nombre)
     session.add(laboratorio)
@@ -73,19 +66,11 @@ def renombrar_laboratorio(
 ):
     laboratorio = _buscar_laboratorio(session, id_laboratorio)
 
-    nombre = datos.nombre.strip()
-    if not nombre:
-        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
-
-    # Duplicado sin importar mayúsculas ni espacios, salvo con él mismo.
-    repetido = session.exec(
-        select(Laboratorio).where(
-            func.lower(Laboratorio.nombre) == nombre.lower(),
-            Laboratorio.id_laboratorio != id_laboratorio,
-        )
-    ).first()
-    if repetido:
-        raise HTTPException(status_code=409, detail="Ya existe un laboratorio con ese nombre")
+    nombre = nombre_limpio(datos.nombre)
+    verificar_nombre_libre(
+        session, Laboratorio, Laboratorio.id_laboratorio, nombre,
+        "Ya existe un laboratorio con ese nombre", id_propio=id_laboratorio,
+    )
 
     laboratorio.nombre = nombre
     session.add(laboratorio)

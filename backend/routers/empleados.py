@@ -3,21 +3,21 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from comun import obtener_o_404
 from db import get_session
 from dependencias import requiere_rol
 from models import Empleado, Usuario
 from roles import Rol
-from schemas_empleados import CambiarContrasena, EmpleadoCrear, EmpleadoEditar, EmpleadoRespuesta
+from schemas_empleados import (
+    CambiarContrasena, EmpleadoCrear, EmpleadoEditar, EmpleadoRespuesta, MENSAJE_SIN_MATRICULA, falta_matricula,
+)
 from security import hashear_contrasena
 
 router = APIRouter(prefix="/empleados", tags=["empleados"])
 
 
 def _buscar_empleado(session: Session, id_empleado: int) -> Empleado:
-    empleado = session.get(Empleado, id_empleado)
-    if empleado is None:
-        raise HTTPException(status_code=404, detail="Empleado no encontrado")
-    return empleado
+    return obtener_o_404(session, Empleado, id_empleado, "Empleado no encontrado")
 
 
 def _usuario_de(session: Session, empleado: Empleado) -> Optional[Usuario]:
@@ -139,8 +139,8 @@ def editar_empleado(
     # La matrícula se controla con el valor final, no solo con lo enviado.
     rol_final = cambios.get("rol", empleado.rol)
     matricula_final = cambios.get("matricula_profesional", empleado.matricula_profesional)
-    if rol_final == Rol.FARMACEUTICO and not (matricula_final or "").strip():
-        raise HTTPException(status_code=422, detail="El farmacéutico debe tener matrícula profesional")
+    if falta_matricula(rol_final, matricula_final):
+        raise HTTPException(status_code=422, detail=MENSAJE_SIN_MATRICULA)
 
     # El email vive en el usuario: no puede repetirse con el de otro.
     if "email" in cambios and usuario_emp is not None:

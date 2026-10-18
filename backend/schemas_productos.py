@@ -1,6 +1,14 @@
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
+
+
+class TipoProducto(str, Enum):
+    MEDICAMENTO = "medicamento"
+    PERFUMERIA = "perfumeria"
+    CUIDADO_PERSONAL = "cuidado_personal"
+    OTRO = "otro"
 
 
 class ProductoCrear(BaseModel):
@@ -9,7 +17,7 @@ class ProductoCrear(BaseModel):
     laboratorio_id: Optional[int] = None
     precio: float = Field(gt=0)
     condicion_iva_id: int
-    tipo_producto: str
+    tipo_producto: TipoProducto
     stock_minimo: int = Field(default=0, ge=0)
 
 
@@ -32,5 +40,5 @@ class ProductoEditar(BaseModel):
     laboratorio_id: Optional[int] = None
     precio: Optional[float] = Field(default=None, gt=0)
     condicion_iva_id: Optional[int] = None
-    tipo_producto: Optional[str] = None
+    tipo_producto: Optional[TipoProducto] = None
     stock_minimo: Optional[int] = Field(default=None, ge=0)

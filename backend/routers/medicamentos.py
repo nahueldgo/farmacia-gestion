@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from comun import buscar_producto
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import (
@@ -18,9 +19,7 @@ ROLES_EDICION_MEDICAMENTO = (Rol.FARMACEUTICO,)
 
 
 def _producto_medicamento(session: Session, id_producto: int) -> Producto:
-    producto = session.get(Producto, id_producto)
-    if producto is None:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    producto = buscar_producto(session, id_producto)
     if producto.tipo_producto != "medicamento":
         raise HTTPException(status_code=422, detail="El producto no es un medicamento")
     return producto

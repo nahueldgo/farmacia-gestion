@@ -1,10 +1,9 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from db import get_session
 from dependencias import obtener_usuario_actual, obtener_usuario_para_cambio, requiere_rol
+from fechas import ahora_utc
 from models import Empleado, Usuario
 from schemas_auth import CambiarContrasenaPropia, LoginRequest, LoginResponse
 from security import crear_token, hashear_contrasena, verificar_contrasena
@@ -28,7 +27,7 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
     if not usuario.activo or not empleado.activo:
         raise HTTPException(status_code=401, detail=mensaje_error)
 
-    usuario.ultimo_login = datetime.now(timezone.utc).replace(tzinfo=None)
+    usuario.ultimo_login = ahora_utc()
     session.add(usuario)
     session.commit()
 

@@ -243,6 +243,17 @@ uvicorn main:app --reload
 
 Sin Docker, el backend lee `DATABASE_URL` y `SECRET_KEY` de las variables de entorno del sistema (con Docker las define el `docker-compose.yml` a partir del `.env`), por lo que hay que definirlas antes de ejecutar `uvicorn`.
 
+### Pruebas automáticas del backend
+
+Las pruebas están en `backend/tests/` y usan `pytest`, que se instala aparte desde `backend/requirements-dev.txt` (las herramientas de desarrollo no forman parte de lo que se despliega). Con el backend corriendo en Docker:
+
+```bash
+docker-compose exec backend pip install -r requirements-dev.txt
+docker-compose exec backend python -m pytest
+```
+
+La instalación hay que repetirla si se reconstruye el contenedor (`docker-compose up --build`). Sin Docker, desde `backend/` y con el entorno virtual activo: `pip install -r requirements-dev.txt` y `python -m pytest`.
+
 ---
 
 ## Despliegue

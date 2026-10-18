@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field, model_validator
 
 from roles import Rol
 
+MENSAJE_SIN_MATRICULA = "El farmacéutico debe tener matrícula profesional"
+
+
+# Un farmacéutico necesita matrícula profesional; los demás roles no.
+def falta_matricula(rol, matricula: Optional[str]) -> bool:
+    return rol == Rol.FARMACEUTICO and not (matricula or "").strip()
+
 
 class EmpleadoCrear(BaseModel):
     nombre: str
@@ -17,11 +24,10 @@ class EmpleadoCrear(BaseModel):
     email: str
     contrasena: str = Field(min_length=8)
 
-    # Un farmacéutico necesita matrícula profesional.
     @model_validator(mode="after")
     def matricula_si_es_farmaceutico(self):
-        if self.rol == Rol.FARMACEUTICO and not (self.matricula_profesional or "").strip():
-            raise ValueError("El farmacéutico debe tener matrícula profesional")
+        if falta_matricula(self.rol, self.matricula_profesional):
+            raise ValueError(MENSAJE_SIN_MATRICULA)
         return self
 
 
