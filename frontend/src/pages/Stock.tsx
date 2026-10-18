@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { FormularioLote } from '../components/FormularioLote';
+import { FormularioProducto } from '../components/FormularioProducto';
 
 interface Producto {
   id_producto: number;
@@ -73,6 +74,10 @@ export function Stock() {
   
   // Solo farmaceutico y auxiliar pueden cargar lotes (el dueño recibe 403)
   const puedeAgregarLote = usuario?.rol === 'farmaceutico' || usuario?.rol === 'auxiliar';
+  const [mostrarAltaProducto, setMostrarAltaProducto] = useState(false);
+
+  // Mismos permisos que para los lotes: farmaceutico y auxiliar
+  const puedeAgregarProducto = puedeAgregarLote;
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -152,6 +157,22 @@ export function Stock() {
     <div>
       <h2>Stock</h2>
 
+      {puedeAgregarProducto && !mostrarAltaProducto && (
+        <p>
+          <button onClick={() => setMostrarAltaProducto(true)}>Nuevo producto</button>
+        </p>
+      )}
+
+      {mostrarAltaProducto && token && (
+        <FormularioProducto
+          token={token}
+          alCrear={() => {
+            setMostrarAltaProducto(false);
+            cargar();
+          }}
+          alCancelar={() => setMostrarAltaProducto(false)}
+        />
+      )}
       <form onSubmit={buscar} style={{ marginBottom: 16 }}>
         <input
           value={busqueda}
