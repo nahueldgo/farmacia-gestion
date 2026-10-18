@@ -5,6 +5,8 @@ from decimal import Decimal
 
 from sqlmodel import Field, SQLModel
 
+from fechas import ahora_utc
+
 class Empleado(SQLModel, table=True):
     __tablename__ = "empleado"
 
@@ -27,7 +29,7 @@ class Usuario(SQLModel, table=True):
     contrasena_hash: str
     activo: bool = True
     debe_cambiar_contrasena: bool = False
-    fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
+    fecha_creacion: datetime = Field(default_factory=ahora_utc)
     ultimo_login: Optional[datetime] = None
 
 
@@ -116,4 +118,4 @@ class Lote(SQLModel, table=True):
     numero_lote: str
     fecha_vencimiento: date
     cantidad: int
-    fecha_creacion: datetime = Field(default_factory=datetime.utcnow)
+    fecha_creacion: datetime = Field(default_factory=ahora_utc)
