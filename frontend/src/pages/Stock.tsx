@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { FormularioLote } from '../components/FormularioLote';
 
 interface Producto {
   id_producto: number;
@@ -68,6 +69,10 @@ export function Stock() {
   const [cargandoLotes, setCargandoLotes] = useState(false);
   const [errorLotes, setErrorLotes] = useState('');
   const [incluirAgotados, setIncluirAgotados] = useState(false);
+  const [mostrarAlta, setMostrarAlta] = useState(false);
+  
+  // Solo farmaceutico y auxiliar pueden cargar lotes (el dueño recibe 403)
+  const puedeAgregarLote = usuario?.rol === 'farmaceutico' || usuario?.rol === 'auxiliar';
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -138,6 +143,7 @@ export function Stock() {
     setSeleccionado(producto);
     setLotes([]);
     setErrorLotes('');
+    setMostrarAlta(false);
   }
 
   if (error) return <p style={{ color: 'crimson' }}>{error}</p>;
@@ -210,6 +216,25 @@ export function Stock() {
             Mostrar lotes agotados
           </label>{' '}
           <button onClick={() => setSeleccionado(null)}>Cerrar</button>
+          {puedeAgregarLote && !mostrarAlta && (
+            <>
+              {' '}
+              <button onClick={() => setMostrarAlta(true)}>Agregar lote</button>
+            </>
+          )}
+
+          {mostrarAlta && token && (
+            <FormularioLote
+              token={token}
+              idProducto={seleccionado.id_producto}
+              alCrear={() => {
+                setMostrarAlta(false);
+                cargarLotes();
+                cargar();
+              }}
+              alCancelar={() => setMostrarAlta(false)}
+            />
+          )}
 
           {errorLotes ? (
             <p style={{ color: 'crimson' }}>{errorLotes}</p>
