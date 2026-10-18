@@ -36,7 +36,7 @@ function formatearFecha(iso: string) {
   return `${dia}/${mes}/${anio}`;
 }
 
-// Días que faltan para el vencimiento (negativo si ya venció)
+// Dias que faltan para el vencimiento (negativo si ya vencio)
 function diasHasta(iso: string) {
   const [anio, mes, dia] = iso.split('-').map(Number);
   const vencimiento = new Date(anio, mes - 1, dia);
@@ -151,7 +151,6 @@ export function Stock() {
     setMostrarAlta(false);
   }
 
-  if (error) return <p style={{ color: 'crimson' }}>{error}</p>;
 
   return (
     <div>
@@ -183,8 +182,13 @@ export function Stock() {
         {termino && <button type="button" onClick={limpiar}>Limpiar</button>}
       </form>
 
-      {cargando ? (
-        <p>Cargando productos...</p>
+      {error ? (
+        <p style={{ color: 'crimson' }}>
+          {error}{' '}
+          <button onClick={cargar}>Reintentar</button>
+        </p>
+      ) : cargando ? (
+         <p>Cargando productos...</p>
       ) : productos.length === 0 ? (
         <p>
           {termino
