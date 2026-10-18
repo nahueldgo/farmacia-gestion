@@ -24,8 +24,12 @@ export function Layout() {
             </li>
           ))}
         </ul>
-
+       
+        <p style={{ marginBottom: '8px' }}>
+          <NavLink to="/cambiar-contrasena">Cambiar mi contraseña</NavLink>
+        </p>
         <button onClick={logout}>Cerrar sesión</button>
+      
       </nav>
 
       <main style={{ flex: 1, padding: '20px' }}>

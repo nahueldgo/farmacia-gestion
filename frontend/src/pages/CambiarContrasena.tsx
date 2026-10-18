@@ -72,9 +72,13 @@ export function CambiarContrasena() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '320px' }}>
+        
         <h2>Cambiar contraseña</h2>
+       
         <p style={{ fontSize: '14px', color: '#666' }}>
-          Hola, {usuario.nombre}. Tenés que elegir una contraseña nueva antes de continuar.
+          {usuario.debeCambiarContrasena
+          ? `Hola, ${usuario.nombre}. Tenés que elegir una contraseña nueva antes de continuar.`
+          : `Hola, ${usuario.nombre}. Ingresá tu contraseña actual y elegí una nueva.`}
         </p>
 
         <input
@@ -101,6 +105,10 @@ export function CambiarContrasena() {
         <button type="submit" disabled={cargando}>
           {cargando ? 'Guardando...' : 'Cambiar contraseña'}
         </button>
+          {!usuario.debeCambiarContrasena && (
+        <button type="button" onClick={() => navigate('/')}>Cancelar</button>
+)}
+
       </form>
     </div>
   );
