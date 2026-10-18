@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from comun import obtener_o_404
 from db import get_session
 from dependencias import requiere_rol
 from models import Empleado, Usuario
@@ -14,10 +15,7 @@ router = APIRouter(prefix="/empleados", tags=["empleados"])
 
 
 def _buscar_empleado(session: Session, id_empleado: int) -> Empleado:
-    empleado = session.get(Empleado, id_empleado)
-    if empleado is None:
-        raise HTTPException(status_code=404, detail="Empleado no encontrado")
-    return empleado
+    return obtener_o_404(session, Empleado, id_empleado, "Empleado no encontrado")
 
 
 def _usuario_de(session: Session, empleado: Empleado) -> Optional[Usuario]:

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, select
 
+from comun import buscar_producto, obtener_o_404
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import Lote, Producto
@@ -15,19 +16,14 @@ ROLES_EDICION_LOTE = (Rol.FARMACEUTICO,)
 
 
 def _producto_activo(session: Session, id_producto: int) -> Producto:
-    producto = session.get(Producto, id_producto)
-    if producto is None:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    producto = buscar_producto(session, id_producto)
     if not producto.activo:
         raise HTTPException(status_code=409, detail="El producto está dado de baja")
     return producto
 
 
 def _buscar_lote(session: Session, id_lote: int) -> Lote:
-    lote = session.get(Lote, id_lote)
-    if lote is None:
-        raise HTTPException(status_code=404, detail="Lote no encontrado")
-    return lote
+    return obtener_o_404(session, Lote, id_lote, "Lote no encontrado")
 
 
 # Si dos pedidos repiten el número a la vez, el índice único de la base lo rechaza.
@@ -77,8 +73,7 @@ def listar_lotes(
     session: Session = Depends(get_session),
     usuario: dict = Depends(obtener_usuario_actual),
 ):
-    if session.get(Producto, id_producto) is None:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    buscar_producto(session, id_producto)
 
     consulta = select(Lote).where(Lote.producto_id == id_producto)
     if not incluir_agotados:

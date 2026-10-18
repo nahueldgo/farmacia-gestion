@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select
 
+from comun import nombre_limpio, obtener_o_404, verificar_nombre_libre
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import Medicamento, PrincipioActivo
@@ -15,10 +16,7 @@ ROLES_EDICION_PRINCIPIO = (Rol.FARMACEUTICO,)
 
 
 def _buscar_principio(session: Session, id_principio_activo: int) -> PrincipioActivo:
-    principio = session.get(PrincipioActivo, id_principio_activo)
-    if principio is None:
-        raise HTTPException(status_code=404, detail="Principio activo no encontrado")
-    return principio
+    return obtener_o_404(session, PrincipioActivo, id_principio_activo, "Principio activo no encontrado")
 
 
 @router.get("", response_model=list[PrincipioActivo])
@@ -35,14 +33,11 @@ def crear_principio_activo(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_ALTA_PRINCIPIO)),
 ):
-    nombre = datos.nombre.strip()
-    if not nombre:
-        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
-    existente = session.exec(
-        select(PrincipioActivo).where(func.lower(PrincipioActivo.nombre) == nombre.lower())
-    ).first()
-    if existente:
-        raise HTTPException(status_code=409, detail="Ya existe un principio activo con ese nombre")
+    nombre = nombre_limpio(datos.nombre)
+    verificar_nombre_libre(
+        session, PrincipioActivo, PrincipioActivo.id_principio_activo, nombre,
+        "Ya existe un principio activo con ese nombre",
+    )
 
     principio = PrincipioActivo(nombre=nombre)
     session.add(principio)
@@ -60,19 +55,11 @@ def renombrar_principio_activo(
 ):
     principio = _buscar_principio(session, id_principio_activo)
 
-    nombre = datos.nombre.strip()
-    if not nombre:
-        raise HTTPException(status_code=422, detail="El nombre no puede estar vacío")
-
-    # Duplicado sin importar mayúsculas ni espacios, salvo con él mismo.
-    repetido = session.exec(
-        select(PrincipioActivo).where(
-            func.lower(PrincipioActivo.nombre) == nombre.lower(),
-            PrincipioActivo.id_principio_activo != id_principio_activo,
-        )
-    ).first()
-    if repetido:
-        raise HTTPException(status_code=409, detail="Ya existe un principio activo con ese nombre")
+    nombre = nombre_limpio(datos.nombre)
+    verificar_nombre_libre(
+        session, PrincipioActivo, PrincipioActivo.id_principio_activo, nombre,
+        "Ya existe un principio activo con ese nombre", id_propio=id_principio_activo,
+    )
 
     principio.nombre = nombre
     session.add(principio)

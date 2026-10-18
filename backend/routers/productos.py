@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select, func
 
+from comun import buscar_producto
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from fechas import hoy
@@ -115,17 +116,7 @@ def obtener_producto(
     session: Session = Depends(get_session),
     usuario: dict = Depends(obtener_usuario_actual),
 ):
-    producto = session.get(Producto, id_producto)
-    if producto is None:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return _con_stock(session, producto)
-
-
-def _buscar_producto(session: Session, id_producto: int) -> Producto:
-    producto = session.get(Producto, id_producto)
-    if producto is None:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return producto
+    return _con_stock(session, buscar_producto(session, id_producto))
 
 
 @router.patch("/{id_producto}", response_model=ProductoRespuesta)
@@ -135,7 +126,7 @@ def editar_producto(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_EDICION_PRODUCTO)),
 ):
-    producto = _buscar_producto(session, id_producto)
+    producto = buscar_producto(session, id_producto)
     # Solo los campos que vinieron en el pedido.
     cambios = datos.model_dump(exclude_unset=True)
 
@@ -195,7 +186,7 @@ def dar_de_baja_producto(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_EDICION_PRODUCTO)),
 ):
-    producto = _buscar_producto(session, id_producto)
+    producto = buscar_producto(session, id_producto)
     producto.activo = False
     session.add(producto)
     session.commit()
@@ -209,7 +200,7 @@ def reactivar_producto(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_EDICION_PRODUCTO)),
 ):
-    producto = _buscar_producto(session, id_producto)
+    producto = buscar_producto(session, id_producto)
     producto.activo = True
     session.add(producto)
     session.commit()
