@@ -54,12 +54,13 @@ export function FormularioEditarEmpleado({ token, empleado, alGuardar, alCancela
     }
 
     // Mandamos solo los campos que cambiaron
-    const cambios: Record<string, string> = {};
+    const cambios: Record<string, string | null> = {};
     if (nombre.trim() !== empleado.nombre) cambios.nombre = nombre.trim();
     if (apellido.trim() !== empleado.apellido) cambios.apellido = apellido.trim();
     if (rol !== empleado.rol) cambios.rol = rol;
-    if (matricula.trim() && matricula.trim() !== (empleado.matricula_profesional ?? '')) {
-      cambios.matricula_profesional = matricula.trim();
+    if (matricula.trim() !== (empleado.matricula_profesional ?? '')) {
+      // Si la vacio, mandamos null para borrarla
+      cambios.matricula_profesional = matricula.trim() || null;
     }
     if (fechaIngreso !== empleado.fecha_ingreso.slice(0, 10)) cambios.fecha_ingreso = fechaIngreso;
     if (email.trim() !== empleado.email) cambios.email = email.trim();
