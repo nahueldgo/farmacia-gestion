@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { FormularioEmpleado } from '../components/FormularioEmpleado';
+import { FormularioEditarEmpleado } from '../components/FormularioEditarEmpleado';
 
 interface Empleado {
   id_empleado: number;
@@ -16,7 +17,7 @@ interface Empleado {
   email: string;
 }
 
-// Lee el mensaje de error que manda el backend (campo "detail"); si no hay, usa uno por defecto
+// Lee el mensaje de error que manda el backend (campo "detail"), si no hay, usa uno por defecto
 async function leerDetalle(respuesta: Response, porDefecto: string) {
   const datos = await respuesta.json().catch(() => null);
   return typeof datos?.detail === 'string' ? datos.detail : porDefecto;
@@ -33,6 +34,7 @@ export function Empleados() {
   const [mensaje, setMensaje] = useState('');
   const [enProceso, setEnProceso] = useState<number | null>(null);
   const [mostrarAlta, setMostrarAlta] = useState(false);
+  const [aEditar, setAEditar] = useState<Empleado | null>(null);
 
   // Cambio de contraseña
   const [aCambiar, setACambiar] = useState<Empleado | null>(null);
@@ -192,6 +194,17 @@ export function Empleados() {
               <td>{e.activo ? 'Activo' : 'Inactivo'}</td>
               <td>
                 <button
+                  onClick={() => {
+                    setAEditar(e);
+                    setMostrarAlta(false);
+                    setACambiar(null);
+                    setMensaje('');
+                    setErrorAccion('');
+                  }}
+                >
+                  Editar
+                </button>{' '}
+                <button
                   disabled={enProceso === e.id_empleado}
                   onClick={() => cambiarEstado(e, e.activo ? 'baja' : 'reactivar')}
                 >
@@ -205,6 +218,20 @@ export function Empleados() {
           ))}
         </tbody>
       </table>
+      
+      {aEditar && token && (
+        <FormularioEditarEmpleado
+          key={aEditar.id_empleado}
+          token={token}
+          empleado={aEditar}
+          alCancelar={() => setAEditar(null)}
+          alGuardar={(nombre) => {
+            setAEditar(null);
+            setMensaje(`Datos de ${nombre} actualizados.`);
+            cargar();
+          }}
+        />
+      )}
 
       {aCambiar && (
         <form onSubmit={guardarContrasena} style={{ marginTop: 24 }}>
