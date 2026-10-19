@@ -47,6 +47,20 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** se registra una venta de ese producto
 **Entonces** el sistema descuenta stock priorizando el lote más próximo a vencer, y genera una alerta si queda stock próximo a caducar
 
+### Descuento de stock al vender
+
+**Dado que** un producto tiene lotes con distintas fechas de vencimiento y cantidades
+**Cuando** se confirma una venta de una cantidad determinada de ese producto
+**Entonces** el sistema descuenta primero del lote que vence antes, y si ese lote no alcanza, completa con el siguiente, los lotes vencidos y los agotados no se tienen en cuenta, y un lote que vence hoy se puede vender durante todo el día
+
+**Dado que** la suma de los lotes vendibles de un producto es menor a la cantidad pedida
+**Cuando** se intenta confirmar la venta
+**Entonces** el sistema rechaza la operación, informa que no hay stock suficiente y no descuenta nada de ningún lote
+
+**Dado que** dos ventas simultáneas piden el mismo producto
+**Cuando** ambas se confirman al mismo tiempo
+**Entonces** el sistema procesa el descuento de forma que ninguna unidad se venda dos veces
+
 ### Cierre de caja diario
 
 **Dado que** finalizó la jornada de ventas
@@ -58,6 +72,16 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Dado que** existen ventas registradas en distintos períodos
 **Cuando** el dueño/a o gerente filtra por día, mes o período
 **Entonces** el sistema muestra la cantidad de tickets por producto y los porcentajes de facturación correspondientes
+
+### Inicio de sesión y acceso al sistema
+
+**Dado que** un empleado tiene un usuario activo con su contraseña
+**Cuando** inicia sesión con su nombre de usuario y su contraseña
+**Entonces** el sistema le da acceso con un token de 60 minutos y las funciones de su rol, si el usuario no existe o la contraseña es incorrecta, responde con el mismo mensaje de error para no revelar qué usuarios existen, y si el empleado fue dado de baja, no lo deja ingresar
+
+**Dado que** el empleado ingresa con una contraseña que eligió otra persona (alta nueva o reseteo hecho por el dueño)
+**Cuando** inicia sesión
+**Entonces** el sistema le exige cambiarla antes de usar cualquier otra función, y la nueva contraseña debe tener al menos 8 caracteres y ser distinta de la anterior
 
 ### Usuarios, roles y responsabilidad individual
 
