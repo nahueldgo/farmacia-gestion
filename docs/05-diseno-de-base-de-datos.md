@@ -184,6 +184,19 @@ Cardinalidad resultante: todo `Usuario` está asociado a un único `Empleado` (o
 
 **Justificación:** es el mismo criterio aplicado a `tipo_producto`, `rol` y `estado`: se trata de un conjunto de valores fijo, pequeño y estable, referenciado desde una única tabla (`Venta`). (Ver sección 19 sobre por qué `condicion_iva`, que antes seguía este mismo criterio, pasó a ser una tabla de catálogo). No existe la necesidad de sincronización entre múltiples tablas que sí justifica una tabla de catálogo aparte, como es el caso de `CategoriaCoberturaObraSocial` (referenciada desde `Medicamento` y `ReglaCobertura`). Agregar una tabla `MedioPago` para cinco valores que no cambian con frecuencia habría sumado una FK y un JOIN adicional en cada consulta de ventas, sin ningún beneficio real de mantenimiento.
 
+## 12.1 `estado` de la venta
+
+**Decisión:** el estado de una venta se modela como el campo `estado` (VARCHAR con dos valores fijos: `'confirmada'` y `'anulada'`, con `DEFAULT 'confirmada'` y `NOT NULL`) directamente en `Venta`, con un `CHECK` que impide cualquier otro valor. Es el mismo criterio que `medio_pago` (ver sección 12 y sección 19): un conjunto de valores fijo, pequeño y controlado por el sistema, sin riesgo de inconsistencia de escritura.
+
+**Significado de cada valor:**
+
+- `confirmada`: la venta se registró y sigue vigente. Es el valor con el que nace toda venta, ya que la venta se guarda como una única operación atómica junto con su detalle y el descuento de stock, y no hay una etapa previa de borrador.
+- `anulada`: la venta se dejó sin efecto, pero el registro se conserva.
+
+**Por qué se anula en lugar de borrar:** las ventas no se eliminan, porque referencian al empleado, a la caja y al lote de cada línea, y deben conservar la trazabilidad de quién hizo qué y cuándo (ver sección 17). Cambiar el `estado` a `'anulada'` deja el historial intacto. Por la misma razón, `detalle_venta` no se borra con la venta salvo por la protección de consistencia descripta en la sección 17.
+
+**Alcance de esta versión:** el reintegro del stock al lote de origen cuando se anula una venta no se automatiza (ver [Gestión del Alcance](./03-gestion-alcance.md)). Se descartó agregar estados intermedios (por ejemplo, pendiente o devuelta) porque el flujo del TFI no los necesita; si más adelante hacen falta, alcanza con ampliar el `CHECK`.
+
 ## 13. `Caja` y `MovimientoCaja`
 
 **Decisión:** `Caja` representa la sesión de apertura/cierre diario, con dos claves foráneas distintas hacia `Empleado` (`empleado_apertura_id`, `empleado_cierre_id`); `MovimientoCaja` es una tabla aparte para los ingresos/retiros manuales.
