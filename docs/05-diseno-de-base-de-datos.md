@@ -176,7 +176,9 @@ Cardinalidad resultante: todo `Usuario` está asociado a un único `Empleado` (o
 
 **Decisión:** `email` vive en `Usuario`, no en `Empleado`.
 
-**Justificación:** el `email` en este sistema cumple una función de dato de cuenta (login, recuperación de contraseña), no de dato de contacto general de la persona: es un concepto de la misma familia que `nombre_usuario` y `contrasena_hash`, que ya viven en `Usuario`. Ponerlo en `Empleado` como NOT NULL obligaría a cargar un email en el momento de dar de alta el legajo, incluso cuando todavía no se decidió si esa persona va a tener acceso al sistema, rompiendo la misma separación legajo/acceso que justifica tener `Usuario` como tabla aparte.
+**Justificación:** el `email` en este sistema cumple una función de dato de cuenta (identifica al usuario y es su dato de contacto en el sistema), no de dato de contacto general de la persona: es un concepto de la misma familia que `nombre_usuario` y `contrasena_hash`, que ya viven en `Usuario`. Ponerlo en `Empleado` como NOT NULL obligaría a cargar un email en el momento de dar de alta el legajo, incluso cuando todavía no se decidió si esa persona va a tener acceso al sistema, rompiendo la misma separación legajo/acceso que justifica tener `Usuario` como tabla aparte.
+
+**Qué no hace el email:** no se usa para recuperar la contraseña. Esa función (envío de correos y códigos con vencimiento) queda fuera del alcance del proyecto, como se explica en `docs/04`. Si alguien olvida su clave, se la resetea el dueño, y el cambio obligatorio en el primer ingreso se mantiene también después de un reseteo: la clave que eligió el dueño es solo temporal y la definitiva la elige el empleado, sin que el dueño la conozca.
 
 ## 12. Por qué no existe una entidad `MedioPago`
 
