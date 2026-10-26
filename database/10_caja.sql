@@ -12,3 +12,6 @@ CREATE TABLE caja (
     estado VARCHAR(20) NOT NULL DEFAULT 'abierta'
         CHECK (estado IN ('abierta', 'cerrada'))
 );
+
+-- Solo puede haber una caja abierta a la vez (la base lo garantiza aunque dos pedidos lleguen juntos).
+CREATE UNIQUE INDEX uq_una_caja_abierta ON caja (estado) WHERE estado = 'abierta';

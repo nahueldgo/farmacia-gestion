@@ -119,3 +119,76 @@ class Lote(SQLModel, table=True):
     fecha_vencimiento: date
     cantidad: int
     fecha_creacion: datetime = Field(default_factory=ahora_utc)
+
+
+class Cliente(SQLModel, table=True):
+    __tablename__ = "cliente"
+
+    id_cliente: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str
+    apellido: str
+    dni: str = Field(unique=True)
+    telefono: Optional[str] = None
+    fecha_creacion: datetime = Field(default_factory=ahora_utc)
+
+
+class ObraSocial(SQLModel, table=True):
+    __tablename__ = "obra_social"
+
+    id_obra_social: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str
+    cuit: Optional[str] = Field(default=None, unique=True)
+    contacto: Optional[str] = None
+    tipo_validacion: str = "manual"
+    activo: bool = True
+
+
+class Caja(SQLModel, table=True):
+    __tablename__ = "caja"
+
+    id_caja: Optional[int] = Field(default=None, primary_key=True)
+    fecha: date
+    empleado_apertura_id: int = Field(foreign_key="empleado.id_empleado")
+    hora_apertura: datetime
+    monto_apertura: Decimal
+    empleado_cierre_id: Optional[int] = Field(default=None, foreign_key="empleado.id_empleado")
+    hora_cierre: Optional[datetime] = None
+    monto_cierre_declarado: Optional[Decimal] = None
+    monto_cierre_sistema: Optional[Decimal] = None
+    diferencia: Optional[Decimal] = None
+    estado: str = "abierta"
+
+
+class Venta(SQLModel, table=True):
+    __tablename__ = "venta"
+
+    id_venta: Optional[int] = Field(default=None, primary_key=True)
+    numero_comprobante: str = Field(unique=True)
+    clave_operacion: Optional[str] = Field(default=None, unique=True)
+    fecha: datetime = Field(default_factory=ahora_utc)
+    empleado_id: int = Field(foreign_key="empleado.id_empleado")
+    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id_cliente")
+    obra_social_id: Optional[int] = Field(default=None, foreign_key="obra_social.id_obra_social")
+    caja_id: int = Field(foreign_key="caja.id_caja")
+    medio_pago: str
+    subtotal: Decimal
+    monto_cobertura: Decimal = Decimal("0")
+    monto_gravado: Decimal = Decimal("0")
+    monto_exento: Decimal = Decimal("0")
+    total_a_pagar: Decimal
+    receta_verificada: bool = False
+    estado: str = "confirmada"
+    empleado_anulacion_id: Optional[int] = Field(default=None, foreign_key="empleado.id_empleado")
+    fecha_anulacion: Optional[datetime] = None
+
+
+class DetalleVenta(SQLModel, table=True):
+    __tablename__ = "detalle_venta"
+
+    id_detalle_venta: Optional[int] = Field(default=None, primary_key=True)
+    venta_id: int = Field(foreign_key="venta.id_venta")
+    producto_id: int = Field(foreign_key="producto.id_producto")
+    lote_id: int = Field(foreign_key="lote.id_lote")
+    cantidad: int
+    precio_unitario: Decimal
+    subtotal: Decimal
