@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlmodel import Session, func, select
 
-from models import Producto
+from models import Producto, Usuario
 
 
 # Busca por clave primaria; si no existe, responde 404 con el mensaje dado.
@@ -31,3 +31,11 @@ def verificar_nombre_libre(session: Session, modelo, columna_id, nombre: str, me
         consulta = consulta.where(columna_id != id_propio)
     if session.exec(consulta).first():
         raise HTTPException(status_code=409, detail=mensaje)
+
+
+# El empleado sale del token, no lo manda el cliente.
+def empleado_del_usuario(session: Session, usuario: dict) -> int:
+    fila = session.exec(select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])).first()
+    if fila is None:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    return fila.empleado_id
