@@ -8,14 +8,14 @@ from models import (
     Producto, Medicamento, MedicamentoClaseTerapeutica, PrincipioActivo,
     FormaFarmaceutica, ClaseTerapeutica, CategoriaCoberturaObraSocial,
 )
-from roles import Rol
+from roles import ROLES_OPERATIVOS, SOLO_FARMACEUTICO
 from schemas_medicamentos import MedicamentoCrear, MedicamentoEditar, MedicamentoRespuesta
 
 router = APIRouter(prefix="/productos/{id_producto}/medicamento", tags=["medicamentos"])
 
-ROLES_ALTA_MEDICAMENTO = (Rol.FARMACEUTICO, Rol.AUXILIAR)
+ROLES_ALTA_MEDICAMENTO = ROLES_OPERATIVOS
 LARGO_CONCENTRACION = 30
-ROLES_EDICION_MEDICAMENTO = (Rol.FARMACEUTICO,)
+ROLES_EDICION_MEDICAMENTO = SOLO_FARMACEUTICO
 
 
 def _producto_medicamento(session: Session, id_producto: int) -> Producto:

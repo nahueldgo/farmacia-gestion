@@ -10,12 +10,12 @@ from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from fechas import a_hora_argentina, ahora_utc, hoy
 from models import Caja
-from roles import Rol
+from roles import ROLES_OPERATIVOS
 from schemas_caja import CajaAbrir, CajaRespuesta
 
 router = APIRouter(prefix="/caja", tags=["caja"])
 
-ROLES_OPERAN_CAJA = (Rol.FARMACEUTICO, Rol.AUXILIAR)
+ROLES_OPERAN_CAJA = ROLES_OPERATIVOS
 
 
 def _caja_abierta(session: Session) -> Optional[Caja]:

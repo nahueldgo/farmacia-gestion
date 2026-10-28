@@ -6,13 +6,13 @@ from comun import buscar_producto, obtener_o_404
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import Lote, Producto
-from roles import Rol
+from roles import ROLES_OPERATIVOS, SOLO_FARMACEUTICO
 from schemas_lotes import LoteAjuste, LoteCrear, LoteEditar, LoteRespuesta
 
 router = APIRouter(tags=["lotes"])
 
-ROLES_ALTA_LOTE = (Rol.FARMACEUTICO, Rol.AUXILIAR)
-ROLES_EDICION_LOTE = (Rol.FARMACEUTICO,)
+ROLES_ALTA_LOTE = ROLES_OPERATIVOS
+ROLES_EDICION_LOTE = SOLO_FARMACEUTICO
 
 
 def _producto_activo(session: Session, id_producto: int) -> Producto:

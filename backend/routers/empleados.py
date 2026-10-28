@@ -7,11 +7,13 @@ from comun import obtener_o_404
 from db import get_session
 from dependencias import requiere_rol
 from models import Empleado, Usuario
-from roles import Rol
+from roles import Rol, SOLO_DUENO
 from schemas_empleados import (
     CambiarContrasena, EmpleadoCrear, EmpleadoEditar, EmpleadoRespuesta, MENSAJE_SIN_MATRICULA, falta_matricula,
 )
 from security import hashear_contrasena
+
+ROLES_GESTION_EMPLEADOS = SOLO_DUENO
 
 router = APIRouter(prefix="/empleados", tags=["empleados"])
 
@@ -65,7 +67,7 @@ def _quedaria_sin_dueno(session: Session, id_empleado: int) -> bool:
 def crear_empleado(
     datos: EmpleadoCrear,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     if session.exec(select(Empleado).where(Empleado.dni == datos.dni)).first():
         raise HTTPException(status_code=409, detail="Ya existe un empleado con ese DNI")
@@ -103,7 +105,7 @@ def crear_empleado(
 @router.get("", response_model=list[EmpleadoRespuesta])
 def listar_empleados(
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleados = session.exec(select(Empleado)).all()
     return [_respuesta(e, _usuario_de(session, e)) for e in empleados]
@@ -113,7 +115,7 @@ def listar_empleados(
 def obtener_empleado(
     id_empleado: int,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleado = _buscar_empleado(session, id_empleado)
     return _respuesta(empleado, _usuario_de(session, empleado))
@@ -124,7 +126,7 @@ def editar_empleado(
     id_empleado: int,
     datos: EmpleadoEditar,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleado = _buscar_empleado(session, id_empleado)
     usuario_emp = _usuario_de(session, empleado)
@@ -173,7 +175,7 @@ def editar_empleado(
 def dar_de_baja_empleado(
     id_empleado: int,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleado = _buscar_empleado(session, id_empleado)
     if empleado.id_empleado == _id_empleado_logueado(session, usuario):
@@ -198,7 +200,7 @@ def dar_de_baja_empleado(
 def reactivar_empleado(
     id_empleado: int,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleado = _buscar_empleado(session, id_empleado)
     usuario_emp = _usuario_de(session, empleado)
@@ -219,7 +221,7 @@ def cambiar_contrasena_empleado(
     id_empleado: int,
     datos: CambiarContrasena,
     session: Session = Depends(get_session),
-    usuario: dict = Depends(requiere_rol(Rol.DUENO)),
+    usuario: dict = Depends(requiere_rol(*ROLES_GESTION_EMPLEADOS)),
 ):
     empleado = _buscar_empleado(session, id_empleado)
     usuario_emp = _usuario_de(session, empleado)

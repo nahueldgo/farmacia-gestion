@@ -9,14 +9,14 @@ from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from fechas import hoy
 from models import Producto, Laboratorio, CondicionIva, Medicamento, Lote
-from roles import Rol
+from roles import ROLES_OPERATIVOS, SOLO_FARMACEUTICO
 from schemas_productos import ProductoCrear, ProductoEditar, ProductoRespuesta, TipoProducto
 
 
 router = APIRouter(prefix="/productos", tags=["productos"])
 
-ROLES_ALTA_PRODUCTO = (Rol.FARMACEUTICO, Rol.AUXILIAR)
-ROLES_EDICION_PRODUCTO = (Rol.FARMACEUTICO,)
+ROLES_ALTA_PRODUCTO = ROLES_OPERATIVOS
+ROLES_EDICION_PRODUCTO = SOLO_FARMACEUTICO
 
 
 # Stock vendible: suma de los lotes que todavía no vencieron.

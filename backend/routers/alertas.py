@@ -8,12 +8,12 @@ from db import get_session
 from dependencias import requiere_rol
 from fechas import hoy
 from models import Lote, Producto
-from roles import Rol
+from roles import SOLO_FARMACEUTICO
 from schemas_alertas import AlertaStockBajo, AlertaVencimiento
 
 router = APIRouter(prefix="/alertas", tags=["alertas"])
 
-ROLES_ALERTAS = (Rol.FARMACEUTICO,)
+ROLES_ALERTAS = SOLO_FARMACEUTICO
 
 
 # Productos activos cuyo stock vendible (lotes sin vencer) está por debajo del mínimo.

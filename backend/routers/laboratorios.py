@@ -5,14 +5,14 @@ from comun import nombre_limpio, obtener_o_404, verificar_nombre_libre
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from models import Laboratorio
-from roles import Rol
+from roles import SOLO_FARMACEUTICO, TODOS_LOS_ROLES
 from schemas_catalogos import CatalogoCrear
 
 router = APIRouter(prefix="/catalogos/laboratorios", tags=["laboratorios"])
 
 # El alta la puede hacer cualquier rol operativo.
-ROLES_ALTA_LABORATORIO = (Rol.FARMACEUTICO, Rol.AUXILIAR, Rol.DUENO)
-ROLES_EDICION_LABORATORIO = (Rol.FARMACEUTICO,)
+ROLES_ALTA_LABORATORIO = TODOS_LOS_ROLES
+ROLES_EDICION_LABORATORIO = SOLO_FARMACEUTICO
 
 
 def _buscar_laboratorio(session: Session, id_laboratorio: int) -> Laboratorio:
