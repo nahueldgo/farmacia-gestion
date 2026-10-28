@@ -33,9 +33,19 @@ def verificar_nombre_libre(session: Session, modelo, columna_id, nombre: str, me
         raise HTTPException(status_code=409, detail=mensaje)
 
 
-# El empleado sale del token, no lo manda el cliente.
-def empleado_del_usuario(session: Session, usuario: dict) -> int:
-    fila = session.exec(select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])).first()
+# Busca un usuario por su nombre de usuario; devuelve None si no existe.
+def buscar_usuario(session: Session, nombre_usuario: str) -> Usuario | None:
+    return session.exec(select(Usuario).where(Usuario.nombre_usuario == nombre_usuario)).first()
+
+
+# El usuario que hizo el pedido, según su token; si ya no existe, responde 401.
+def usuario_del_token(session: Session, usuario: dict) -> Usuario:
+    fila = buscar_usuario(session, usuario["sub"])
     if fila is None:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    return fila.empleado_id
+    return fila
+
+
+# El empleado sale del token, no lo manda el cliente.
+def empleado_del_usuario(session: Session, usuario: dict) -> int:
+    return usuario_del_token(session, usuario).empleado_id

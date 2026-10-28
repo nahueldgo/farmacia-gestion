@@ -2,6 +2,7 @@ from getpass import getpass
 
 from sqlmodel import Session, select
 
+from comun import buscar_usuario
 from db import engine
 from fechas import hoy
 from models import Empleado, Usuario
@@ -38,7 +39,7 @@ def crear_dueno():
 
         if session.exec(select(Empleado).where(Empleado.dni == dni)).first():
             raise SystemExit("Ya existe un empleado con ese DNI.")
-        if session.exec(select(Usuario).where(Usuario.nombre_usuario == nombre_usuario)).first():
+        if buscar_usuario(session, nombre_usuario):
             raise SystemExit("Ya existe un usuario con ese nombre de usuario.")
         if session.exec(select(Usuario).where(Usuario.email == email)).first():
             raise SystemExit("Ya existe un usuario con ese email.")

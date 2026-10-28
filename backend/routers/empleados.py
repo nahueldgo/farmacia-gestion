@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from comun import obtener_o_404
+from comun import buscar_usuario, obtener_o_404
 from db import get_session
 from dependencias import requiere_rol
 from models import Empleado, Usuario
@@ -44,9 +44,7 @@ def _respuesta(empleado: Empleado, usuario_emp: Optional[Usuario]) -> EmpleadoRe
 
 
 def _id_empleado_logueado(session: Session, usuario: dict) -> Optional[int]:
-    actual = session.exec(
-        select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])
-    ).first()
+    actual = buscar_usuario(session, usuario["sub"])
     return actual.empleado_id if actual else None
 
 
@@ -71,7 +69,7 @@ def crear_empleado(
 ):
     if session.exec(select(Empleado).where(Empleado.dni == datos.dni)).first():
         raise HTTPException(status_code=409, detail="Ya existe un empleado con ese DNI")
-    if session.exec(select(Usuario).where(Usuario.nombre_usuario == datos.nombre_usuario)).first():
+    if buscar_usuario(session, datos.nombre_usuario):
         raise HTTPException(status_code=409, detail="Ya existe un usuario con ese nombre de usuario")
     if session.exec(select(Usuario).where(Usuario.email == datos.email)).first():
         raise HTTPException(status_code=409, detail="Ya existe un usuario con ese email")

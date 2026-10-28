@@ -1,5 +1,6 @@
 from sqlmodel import Session, select
 
+from comun import buscar_usuario
 from db import engine
 from fechas import hoy
 from models import Empleado, Usuario
@@ -57,9 +58,7 @@ def cargar_usuario(session: Session, datos: dict):
     else:
         print("Empleado ya existe:", datos["nombre_usuario"], "- id:", empleado.id_empleado)
 
-    usuario = session.exec(
-        select(Usuario).where(Usuario.nombre_usuario == datos["nombre_usuario"])
-    ).first()
+    usuario = buscar_usuario(session, datos["nombre_usuario"])
 
     if usuario is None:
         usuario = Usuario(

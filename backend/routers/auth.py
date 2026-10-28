@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session
 
+from comun import buscar_usuario, usuario_del_token
 from db import get_session
 from dependencias import obtener_usuario_actual, obtener_usuario_para_cambio, requiere_rol
 from fechas import ahora_utc
-from models import Empleado, Usuario
+from models import Empleado
 from schemas_auth import CambiarContrasenaPropia, LoginRequest, LoginResponse
 from security import crear_token, hashear_contrasena, verificar_contrasena
 
@@ -15,9 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def login(datos: LoginRequest, session: Session = Depends(get_session)):
     mensaje_error = "Usuario o contraseña incorrectos"
 
-    usuario = session.exec(
-        select(Usuario).where(Usuario.nombre_usuario == datos.nombreUsuario)
-    ).first()
+    usuario = buscar_usuario(session, datos.nombreUsuario)
 
     if usuario is None or not verificar_contrasena(datos.contrasena, usuario.contrasena_hash):
         raise HTTPException(status_code=401, detail=mensaje_error)
@@ -51,11 +50,7 @@ def refrescar_token(
     usuario: dict = Depends(obtener_usuario_actual),
     session: Session = Depends(get_session),
 ):
-    usuario_db = session.exec(
-        select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])
-    ).first()
-    if usuario_db is None:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    usuario_db = usuario_del_token(session, usuario)
 
     empleado = session.get(Empleado, usuario_db.empleado_id)
 
@@ -80,11 +75,7 @@ def cambiar_contrasena_propia(
     usuario: dict = Depends(obtener_usuario_para_cambio),
     session: Session = Depends(get_session),
 ):
-    usuario_db = session.exec(
-        select(Usuario).where(Usuario.nombre_usuario == usuario["sub"])
-    ).first()
-    if usuario_db is None:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    usuario_db = usuario_del_token(session, usuario)
 
     if not verificar_contrasena(datos.contrasena_actual, usuario_db.contrasena_hash):
         raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
