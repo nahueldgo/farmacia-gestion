@@ -11,7 +11,7 @@ from fechas import a_hora_argentina
 from models import DetalleVenta, Empleado, Producto, Venta
 from roles import ROLES_OPERATIVOS
 from schemas_ventas import DetalleRespuesta, EstadoVenta, VentaCrear, VentaRespuesta, VentaResumen
-from servicios.ventas import ErrorDeVenta, crear_venta, ventas_del_periodo
+from servicios.ventas import ErrorDeVenta, anular_venta, crear_venta, ventas_del_periodo
 
 router = APIRouter(prefix="/ventas", tags=["ventas"])
 
@@ -113,4 +113,19 @@ def consultar_venta(
     usuario: dict = Depends(obtener_usuario_actual),
 ):
     venta = obtener_o_404(session, Venta, id_venta, "Venta no encontrada")
+    return _respuesta(session, venta)
+
+
+# Cualquier venta, de hoy o de otro día. El empleado que anula sale del token.
+@router.patch("/{id_venta}/anular", response_model=VentaRespuesta)
+def anular(
+    id_venta: int,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(requiere_rol(*ROLES_VENDEN)),
+):
+    venta = obtener_o_404(session, Venta, id_venta, "Venta no encontrada")
+    try:
+        venta = anular_venta(session, venta, empleado_del_usuario(session, usuario))
+    except ErrorDeVenta as error:
+        raise _como_http(error)
     return _respuesta(session, venta)

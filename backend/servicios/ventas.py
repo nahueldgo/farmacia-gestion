@@ -7,7 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from fechas import hoy, rango_utc_del_dia
+from fechas import ahora_utc, hoy, rango_utc_del_dia
 from fefo import StockInsuficiente, descontar_stock
 from models import Caja, CondicionIva, DetalleVenta, Empleado, Producto, Venta
 from schemas_ventas import EstadoVenta, LineaVenta, VentaCrear
@@ -42,6 +42,10 @@ class StockInsuficienteDe(ErrorDeVenta):
 
 class RangoDeFechasInvalido(ErrorDeVenta):
     estado_http = 422
+
+
+class VentaYaAnulada(ErrorDeVenta):
+    estado_http = 409
 
 
 # Lo que la venta toma de un lote de un producto.
@@ -216,3 +220,18 @@ def ventas_del_periodo(
     if estado:
         consulta = consulta.where(Venta.estado == estado.value)
     return session.exec(consulta).all()
+
+
+# La venta no se borra: pasa a "anulada" y queda quién la anuló y cuándo. El stock no se reintegra.
+def anular_venta(session: Session, venta: Venta, id_empleado: int) -> Venta:
+    session.refresh(venta, with_for_update=True)  # bloquea la fila: dos anulaciones a la vez no se pisan
+    if venta.estado == EstadoVenta.ANULADA.value:
+        session.rollback()
+        raise VentaYaAnulada("La venta ya está anulada")
+    venta.estado = EstadoVenta.ANULADA.value
+    venta.empleado_anulacion_id = id_empleado
+    venta.fecha_anulacion = ahora_utc()
+    session.add(venta)
+    session.commit()
+    session.refresh(venta)
+    return venta

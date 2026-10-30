@@ -2,10 +2,16 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
+from sqlmodel import Session
 
+from models import Venta
 from schemas_ventas import LineaVenta
 from servicios.ventas import (
     RangoDeFechasInvalido,
+    VentaYaAnulada,
+    anular_venta,
     calcular_montos,
     formatear_comprobante,
     importe,
@@ -83,3 +89,37 @@ def test_un_rango_de_un_solo_dia_es_valido():
 def test_hasta_no_puede_ser_anterior_a_desde():
     with pytest.raises(RangoDeFechasInvalido):
         resolver_periodo(date(2026, 10, 15), date(2026, 10, 1), HOY)
+
+
+# Una base en memoria con solo la tabla de ventas: alcanza para probar la regla de anular.
+@pytest.fixture
+def session():
+    motor = create_engine("sqlite://", poolclass=StaticPool)
+    Venta.__table__.create(motor)
+    with Session(motor) as sesion:
+        yield sesion
+
+
+def una_venta_confirmada(session):
+    venta = Venta(
+        numero_comprobante="V-00000001", empleado_id=1, caja_id=1, medio_pago="efectivo",
+        subtotal=Decimal("100"), total_a_pagar=Decimal("100"),
+    )
+    session.add(venta)
+    session.commit()
+    session.refresh(venta)
+    return venta
+
+
+def test_anular_guarda_quien_y_cuando(session):
+    venta = anular_venta(session, una_venta_confirmada(session), id_empleado=7)
+    assert venta.estado == "anulada"
+    assert venta.empleado_anulacion_id == 7
+    assert venta.fecha_anulacion is not None
+
+
+def test_una_venta_anulada_no_se_anula_otra_vez(session):
+    venta = anular_venta(session, una_venta_confirmada(session), id_empleado=7)
+    with pytest.raises(VentaYaAnulada):
+        anular_venta(session, venta, id_empleado=8)
+    assert venta.empleado_anulacion_id == 7
