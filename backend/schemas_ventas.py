@@ -13,6 +13,11 @@ class MedioPago(str, Enum):
     QR = "qr"
 
 
+class EstadoVenta(str, Enum):
+    CONFIRMADA = "confirmada"
+    ANULADA = "anulada"
+
+
 class LineaVenta(BaseModel):
     producto_id: int
     cantidad: int = Field(gt=0)
@@ -32,6 +37,16 @@ class DetalleRespuesta(BaseModel):
     cantidad: int
     precio_unitario: float
     subtotal: float
+
+
+class VentaResumen(BaseModel):
+    id_venta: int
+    numero_comprobante: str
+    fecha: datetime
+    empleado: str
+    medio_pago: str
+    total_a_pagar: float
+    estado: str
 
 
 class VentaRespuesta(BaseModel):

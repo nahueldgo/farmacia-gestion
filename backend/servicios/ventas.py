@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
@@ -6,9 +7,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from fechas import hoy, rango_utc_del_dia
 from fefo import StockInsuficiente, descontar_stock
-from models import Caja, CondicionIva, DetalleVenta, Producto, Venta
-from schemas_ventas import LineaVenta, VentaCrear
+from models import Caja, CondicionIva, DetalleVenta, Empleado, Producto, Venta
+from schemas_ventas import EstadoVenta, LineaVenta, VentaCrear
 
 DOS_DECIMALES = Decimal("0.01")
 
@@ -36,6 +38,10 @@ class ProductoDadoDeBaja(ErrorDeVenta):
 
 class StockInsuficienteDe(ErrorDeVenta):
     estado_http = 409
+
+
+class RangoDeFechasInvalido(ErrorDeVenta):
+    estado_http = 422
 
 
 # Lo que la venta toma de un lote de un producto.
@@ -184,3 +190,29 @@ def crear_venta(session: Session, id_empleado: int, datos: VentaCrear) -> tuple[
 
     session.refresh(venta)
     return venta, True
+
+
+# Sin fechas, las de hoy. Con una sola, ese día. Con las dos, todos los días entre ellas.
+def resolver_periodo(desde: Optional[date], hasta: Optional[date], dia_actual: date) -> tuple[date, date]:
+    primer_dia = desde or hasta or dia_actual
+    ultimo_dia = hasta or primer_dia
+    if ultimo_dia < primer_dia:
+        raise RangoDeFechasInvalido("La fecha hasta no puede ser anterior a la fecha desde")
+    return primer_dia, ultimo_dia
+
+
+# Las ventas de un período (días de Argentina), de la más reciente a la más antigua, con quien las hizo.
+def ventas_del_periodo(
+    session: Session, desde: Optional[date], hasta: Optional[date], estado: Optional[EstadoVenta]
+) -> list[tuple[Venta, Empleado]]:
+    primer_dia, ultimo_dia = resolver_periodo(desde, hasta, hoy())
+    inicio, _ = rango_utc_del_dia(primer_dia)
+    _, fin = rango_utc_del_dia(ultimo_dia)
+    consulta = (
+        select(Venta, Empleado)
+        .where(Venta.empleado_id == Empleado.id_empleado, Venta.fecha >= inicio, Venta.fecha < fin)
+        .order_by(Venta.fecha.desc(), Venta.id_venta.desc())
+    )
+    if estado:
+        consulta = consulta.where(Venta.estado == estado.value)
+    return session.exec(consulta).all()

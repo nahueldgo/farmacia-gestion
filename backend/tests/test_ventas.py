@@ -1,7 +1,19 @@
+from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from schemas_ventas import LineaVenta
-from servicios.ventas import calcular_montos, formatear_comprobante, importe, juntar_lineas
+from servicios.ventas import (
+    RangoDeFechasInvalido,
+    calcular_montos,
+    formatear_comprobante,
+    importe,
+    juntar_lineas,
+    resolver_periodo,
+)
+
+HOY = date(2026, 10, 29)
 
 
 def test_el_comprobante_lleva_prefijo_y_ocho_digitos():
@@ -49,3 +61,25 @@ def test_el_iva_reducido_tambien_cuenta_como_gravado():
 def test_gravado_mas_exento_siempre_da_el_subtotal():
     montos = calcular_montos([(Decimal("33.33"), Decimal("21"), 3), (Decimal("10.10"), Decimal("0"), 7)])
     assert montos.gravado + montos.exento == montos.subtotal == montos.total
+
+
+def test_sin_fechas_se_listan_las_ventas_de_hoy():
+    assert resolver_periodo(None, None, HOY) == (HOY, HOY)
+
+
+def test_con_una_sola_fecha_se_lista_ese_dia():
+    assert resolver_periodo(date(2026, 10, 20), None, HOY) == (date(2026, 10, 20), date(2026, 10, 20))
+    assert resolver_periodo(None, date(2026, 10, 20), HOY) == (date(2026, 10, 20), date(2026, 10, 20))
+
+
+def test_con_las_dos_fechas_se_lista_el_rango():
+    assert resolver_periodo(date(2026, 10, 1), date(2026, 10, 15), HOY) == (date(2026, 10, 1), date(2026, 10, 15))
+
+
+def test_un_rango_de_un_solo_dia_es_valido():
+    assert resolver_periodo(HOY, HOY, HOY) == (HOY, HOY)
+
+
+def test_hasta_no_puede_ser_anterior_a_desde():
+    with pytest.raises(RangoDeFechasInvalido):
+        resolver_periodo(date(2026, 10, 15), date(2026, 10, 1), HOY)
