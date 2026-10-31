@@ -61,6 +61,36 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** ambas se confirman al mismo tiempo
 **Entonces** el sistema procesa el descuento de forma que ninguna unidad se venda dos veces
 
+### Quién registra las ventas y quién solo las consulta
+
+**Dado que** el auxiliar de farmacia, el Dt. farmacéutico/a y el dueño/gerente tienen cada uno su usuario
+**Cuando** intentan registrar o anular una venta
+**Entonces** el sistema se lo permite al auxiliar y al farmacéutico y se lo rechaza al dueño, que solo puede consultar el listado y el detalle de las ventas
+
+### Reintento de una venta sin duplicarla
+
+**Dado que** la pantalla vuelve a enviar un pedido de venta porque se cortó la conexión antes de recibir la respuesta
+**Cuando** el pedido llega con la misma clave de operación que una venta ya registrada
+**Entonces** el sistema devuelve esa venta y no crea otra ni descuenta el stock por segunda vez, incluso si los dos pedidos llegan al mismo tiempo
+
+### Venta con la caja abierta
+
+**Dado que** no hay una caja abierta
+**Cuando** se intenta registrar una venta
+**Entonces** el sistema la rechaza sin descontar stock y pide abrir la caja primero; solo puede haber una caja abierta a la vez
+
+### Consulta del historial de ventas
+
+**Dado que** existen ventas registradas en distintos días
+**Cuando** cualquiera de los tres roles pide el listado sin fechas, con un día o con un rango de fechas, y opcionalmente solo las confirmadas o solo las anuladas
+**Entonces** el sistema muestra las ventas de ese período, de la más reciente a la más antigua y con el día cortado en hora de Argentina, y permite abrir el detalle de cada una con sus líneas, lotes y precios
+
+### Anulación de una venta
+
+**Dado que** una venta confirmada se cargó por error o el cliente se arrepiente, el mismo día o en otra fecha
+**Cuando** el auxiliar de farmacia o el Dt. farmacéutico/a la anula
+**Entonces** la venta pasa a anulada y queda registrado quién la anuló y cuándo, sin borrarla del historial; el stock no se reintegra automáticamente, la venta no puede anularse de nuevo y deja de contarse en el cierre de caja
+
 ### Cierre de caja diario
 
 **Dado que** finalizó la jornada de ventas
