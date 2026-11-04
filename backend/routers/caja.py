@@ -2,10 +2,9 @@ from decimal import Decimal
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from comun import empleado_del_usuario
+from comun import empleado_del_usuario, guardar_o_409
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from fechas import a_hora_argentina, ahora_utc, hoy
@@ -16,6 +15,7 @@ from schemas_caja import CajaAbrir, CajaRespuesta
 router = APIRouter(prefix="/caja", tags=["caja"])
 
 ROLES_OPERAN_CAJA = ROLES_OPERATIVOS
+YA_HAY_CAJA_ABIERTA = "Ya hay una caja abierta"
 
 
 def _caja_abierta(session: Session) -> Optional[Caja]:
@@ -41,7 +41,7 @@ def abrir_caja(
     usuario: dict = Depends(requiere_rol(*ROLES_OPERAN_CAJA)),
 ):
     if _caja_abierta(session):
-        raise HTTPException(status_code=409, detail="Ya hay una caja abierta")
+        raise HTTPException(status_code=409, detail=YA_HAY_CAJA_ABIERTA)
 
     caja = Caja(
         fecha=hoy(),
@@ -49,15 +49,8 @@ def abrir_caja(
         hora_apertura=ahora_utc(),
         monto_apertura=Decimal(str(datos.monto_apertura)),
     )
-    session.add(caja)
-    try:
-        session.commit()
-    except IntegrityError:
-        # Dos pedidos a la vez: el índice único de la base deja pasar solo uno.
-        session.rollback()
-        raise HTTPException(status_code=409, detail="Ya hay una caja abierta")
-    session.refresh(caja)
-    return _respuesta(caja)
+    # Dos pedidos a la vez: el índice único de la base deja pasar solo uno.
+    return _respuesta(guardar_o_409(session, caja, YA_HAY_CAJA_ABIERTA))
 
 
 @router.get("/actual", response_model=CajaRespuesta)

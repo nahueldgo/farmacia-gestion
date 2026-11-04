@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
-from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
+from comun import guardar_o_409
 from db import get_session
 from dependencias import requiere_rol
 from models import Cliente
@@ -33,12 +33,4 @@ def crear_cliente(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_CLIENTES)),
 ):
-    cliente = Cliente(**datos.model_dump())
-    session.add(cliente)
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise HTTPException(status_code=409, detail="Ya existe un cliente con ese DNI")
-    session.refresh(cliente)
-    return cliente
+    return guardar_o_409(session, Cliente(**datos.model_dump()), "Ya existe un cliente con ese DNI")

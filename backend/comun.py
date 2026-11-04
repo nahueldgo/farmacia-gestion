@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, select
 
 from models import Producto, Usuario
@@ -14,6 +15,18 @@ def obtener_o_404(session: Session, modelo, id_objeto: int, mensaje: str):
 
 def buscar_producto(session: Session, id_producto: int) -> Producto:
     return obtener_o_404(session, Producto, id_producto, "Producto no encontrado")
+
+
+# Guarda el objeto; si la base rechaza un dato único repetido (también ante dos pedidos a la vez), responde 409 con el mensaje dado.
+def guardar_o_409(session: Session, objeto, mensaje: str):
+    session.add(objeto)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=409, detail=mensaje)
+    session.refresh(objeto)
+    return objeto
 
 
 # Recorta el nombre y rechaza el vacío.
