@@ -14,6 +14,7 @@ from routers.caja import router as caja_router
 from routers.ventas import router as ventas_router
 from routers.clientes import router as clientes_router
 from routers.obras_sociales import router as obras_sociales_router
+from routers.reglas_cobertura import router as reglas_cobertura_router
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
@@ -39,6 +40,7 @@ app.include_router(caja_router)
 app.include_router(ventas_router)
 app.include_router(clientes_router)
 app.include_router(obras_sociales_router)
+app.include_router(reglas_cobertura_router)
 
 
 @app.get("/")

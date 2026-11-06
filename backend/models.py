@@ -3,6 +3,7 @@ from typing import Optional
 from decimal import Decimal
 
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from fechas import ahora_utc
@@ -140,6 +141,20 @@ class ObraSocial(SQLModel, table=True):
     cuit: Optional[str] = Field(default=None, unique=True)
     contacto: Optional[str] = None
     tipo_validacion: str = "manual"
+    activo: bool = True
+
+
+# Porcentaje que una obra social cubre de una categoría de medicamento; sin regla, no cubre nada.
+class ReglaCobertura(SQLModel, table=True):
+    __tablename__ = "regla_cobertura"
+    __table_args__ = (UniqueConstraint("obra_social_id", "categoria_cobertura_obra_social_id"),)
+
+    id_regla_cobertura: Optional[int] = Field(default=None, primary_key=True)
+    obra_social_id: int = Field(foreign_key="obra_social.id_obra_social")
+    categoria_cobertura_obra_social_id: int = Field(
+        foreign_key="categoria_cobertura_obra_social.id_categoria_cobertura_obra_social"
+    )
+    porcentaje_cobertura: Decimal
     activo: bool = True
 
 
