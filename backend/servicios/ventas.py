@@ -109,7 +109,8 @@ def _caja_abierta(session: Session) -> Caja:
     return caja
 
 
-def _producto_vendible(session: Session, id_producto: int) -> Producto:
+# El producto tiene que existir y no estar dado de baja.
+def producto_vendible(session: Session, id_producto: int) -> Producto:
     producto = session.get(Producto, id_producto)
     if producto is None:
         raise ProductoNoEncontrado(f"No existe el producto {id_producto}")
@@ -122,7 +123,7 @@ def _producto_vendible(session: Session, id_producto: int) -> Producto:
 def _descontar_lineas(session: Session, lineas: list[LineaVenta]) -> list[Tramo]:
     tramos = []
     for id_producto, cantidad in juntar_lineas(lineas).items():
-        producto = _producto_vendible(session, id_producto)
+        producto = producto_vendible(session, id_producto)
         alicuota = session.get(CondicionIva, producto.condicion_iva_id).alicuota
         try:
             usados = descontar_stock(session, id_producto, cantidad)
