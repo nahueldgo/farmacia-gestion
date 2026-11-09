@@ -41,6 +41,36 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** carga el nombre de la entidad y, para cada categoría de medicamento que la entidad decide cubrir (ambulatorio, crónico, oncológico, etc.), el porcentaje de cobertura correspondiente
 **Entonces** esas reglas quedan disponibles para ser aplicadas en futuras ventas sin necesidad de cálculo manual
 
+**Dado que** una obra social ya tiene una regla para una categoría
+**Cuando** el farmacéutico vuelve a cargar esa categoría con otro porcentaje
+**Entonces** el sistema reemplaza el porcentaje anterior y no crea una segunda regla; solo se aceptan porcentajes de 0 a 100 con hasta dos decimales, y cargar 0 equivale a que la obra social no cubra esa categoría
+
+### Quién configura las obras sociales y quién las consulta
+
+**Dado que** el auxiliar de farmacia, el Dt. farmacéutico/a y el dueño/gerente tienen cada uno su usuario
+**Cuando** intentan dar de alta, editar, dar de baja o reactivar una obra social, o cambiar sus porcentajes de cobertura
+**Entonces** el sistema se lo permite solo al farmacéutico; los tres roles pueden consultar las obras sociales activas y sus reglas, y solo el farmacéutico puede ver las dadas de baja
+
+### Obra social dada de baja
+
+**Dado que** una obra social dejó de operar con la farmacia
+**Cuando** el farmacéutico la da de baja
+**Entonces** deja de ofrecerse y de poder usarse en un cálculo de copago, pero conserva sus ventas y sus reglas de cobertura, y puede reactivarse
+
+### Cálculo del copago antes de confirmar la venta
+
+**Dado que** el auxiliar o el farmacéutico eligió una obra social y los productos de una venta
+**Cuando** el sistema calcula el copago
+**Entonces** devuelve, para cada producto, el porcentaje que cubre la obra social según la categoría del medicamento, lo que paga la obra social y lo que paga el cliente, y los totales (subtotal, cobertura y total a cobrar), sin registrar la venta ni descontar stock; el dueño no puede usar este cálculo
+
+**Dado que** un producto no tiene categoría de cobertura, o la obra social no tiene regla para su categoría
+**Cuando** se calcula el copago
+**Entonces** ese producto se cobra completo, sin cobertura
+
+**Dado que** la cobertura de cada producto se calcula por separado y se redondea a dos decimales
+**Cuando** se suman las líneas
+**Entonces** la cobertura más lo que paga el cliente da siempre el subtotal, sin diferencias de centavos
+
 ### Trazabilidad de lotes y vencimientos
 
 **Dado que** un producto tiene múltiples lotes con distintas fechas de vencimiento

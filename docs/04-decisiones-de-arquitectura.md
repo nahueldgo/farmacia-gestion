@@ -145,6 +145,28 @@ Decisiones tomadas al construir el registro de ventas de mostrador, la caja mín
 
 **Pruebas.** Las cuentas y reglas de las ventas (comprobante, redondeo, montos gravado y exento, período del listado y anulación) tienen pruebas automáticas en `backend/tests/` (`pytest`). Además se probó el recorrido completo contra la API en marcha con los tres roles, con una tabla de permisos de todos los endpoints de ventas y caja.
 
+## Cobertura y copago (Módulo 4)
+
+Decisiones tomadas al construir las obras sociales, sus reglas de cobertura y el cálculo del copago, con la alternativa que se descartó en cada caso. Integrar el cálculo al registro de la venta (cliente obligatorio, monto de cobertura guardado y control de la receta) es el paso siguiente.
+
+**Una regla por obra social y categoría, y sin regla no hay cobertura.** La cobertura se define como un porcentaje de 0 a 100 para cada categoría de medicamento (las del PMO, precargadas) y cada obra social. Si la obra social no tiene regla para la categoría de un producto, o el producto no tiene categoría (perfumería, por ejemplo), se cobra completo. Se descartó asumir el piso del PMO como valor por defecto: cada entidad local decide qué cubre, y un porcentaje que nadie cargó produciría cobros incorrectos. La unicidad (una sola regla por obra social y categoría) la garantiza la base de datos, no solo el código, para que dos pedidos simultáneos no dejen dos reglas.
+
+**Cargar el porcentaje con un solo pedido que crea o modifica, y 0 en lugar de borrar.** Quien configura manda "esta obra social cubre esta categoría al X%" sin tener que saber si la regla ya existía, y poner 0 equivale a no tener regla. Se descartó un pedido para crear, otro para modificar y otro para borrar: serían tres formas de llegar al mismo resultado. El porcentaje admite hasta dos decimales, que es lo que acepta la columna de la base.
+
+**Obras sociales con baja lógica.** Igual que los empleados y los productos, se dan de baja en lugar de borrarlas, porque las ventas y las reglas las referencian. Una obra social dada de baja deja de ofrecerse y no se acepta en el cálculo del copago, pero se puede consultar y reactivar. El nombre no puede repetirse (sin distinguir mayúsculas) y el CUIT, que es opcional, es único y lo garantiza la base. Se descartó exigir el CUIT: las mutuales locales y gremiales no siempre lo tienen a mano al darlas de alta.
+
+**Configurar es del farmacéutico y consultar es de todos.** Alta, edición, baja, reactivación y porcentajes: solo el farmacéutico, porque define lo que la farmacia acepta y cobra. Consultar las obras sociales y sus reglas: los tres roles, porque el auxiliar y el farmacéutico las usan al vender y el dueño solo mira. Las dadas de baja las ve solo el farmacéutico, que es quien puede reactivarlas.
+
+**El cálculo detrás de una interfaz (Strategy), y la estrategia solo dice el porcentaje.** El motor se escribió como se había planteado en el diseño extensible: una estrategia responde únicamente qué porcentaje cubre la obra social de una línea, y el cálculo de los montos es el mismo para todas. Por defecto está la estrategia manual, que lee las reglas cargadas, y la que se usa se elige según `tipo_validacion` de la obra social. Para sumar un validador externo alcanza con escribir su clase y registrarla, sin tocar el cálculo. Mientras no exista, una obra social de validación "externa" se calcula igual con sus reglas manuales, en lugar de rechazarse: rechazarla dejaría sin poder vender a esa entidad por una integración que todavía no existe. Se descartó que cada estrategia calcule los montos completos, porque repetiría el redondeo y las reglas de los totales en cada una.
+
+**Se redondea línea por línea.** La cobertura de cada producto es su importe (con IVA incluido, como en la venta) por el porcentaje, redondeada a dos decimales hacia arriba, y los totales son la suma de las líneas. Así lo que ve el cliente en cada renglón suma exactamente el total. Se descartó calcular la cobertura sobre el total: no distinguiría las categorías, y redondear solo al final haría que los renglones no sumaran el total.
+
+**Dos capas: el motor puro y el cálculo de la venta.** `servicios/copago.py` no sabe nada de la base de datos y se prueba con números; `servicios/copago_venta.py` busca la obra social, sus reglas y la categoría de cada producto, y se apoya en el motor. Los productos se validan con la misma función que usa la venta (existen y no están dados de baja) y las líneas repetidas se suman igual. Se descartó escribir el cálculo dentro del router: no se podría probar sin levantar la API.
+
+**El cálculo del copago no guarda nada y no controla el stock.** Lo consulta la pantalla de venta cada vez que cambian los productos o la obra social, y la respuesta tiene que ser inmediata. Por eso es un pedido que solo calcula: no crea ventas, no toca los lotes y no revisa si alcanza el stock, que sigue siendo responsabilidad del registro de la venta. Lo usan farmacéutico y auxiliar, y el dueño recibe 403 porque no vende. Se descartó calcular el copago recién al confirmar la venta: la pantalla no podría mostrar el total a cobrar antes de confirmar.
+
+**Pruebas.** Las cuentas del motor (porcentajes, redondeo, estrategia por defecto y una estrategia nueva agregada sin tocar el cálculo), el cálculo de la venta con una base de prueba y los esquemas tienen pruebas automáticas en `backend/tests/` (`pytest`, 90 en total hasta acá). Además se probó cada parte contra la API en marcha con los tres roles, con una tabla de permisos de todos los endpoints de obras sociales, reglas y cálculo del copago.
+
 ## Frontend y cliente de escritorio
 
 Decisiones tomadas al construir la interfaz (React, TypeScript y Vite, empaquetada con Electron).
