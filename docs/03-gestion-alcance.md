@@ -71,6 +71,22 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** se suman las líneas
 **Entonces** la cobertura más lo que paga el cliente da siempre el subtotal, sin diferencias de centavos
 
+### Registro de una venta con obra social
+
+**Dado que** el auxiliar o el farmacéutico elige una obra social, identifica al cliente y confirma que verificó la receta
+**Cuando** confirma la venta
+**Entonces** el sistema registra una sola operación con la venta, su detalle, el descuento de stock y la cobertura: guarda la obra social, el cliente, el monto que cubre la obra social y el total a pagar, iguales a los del cálculo previo, y deja constancia de que la receta se verificó
+
+### Control de cliente y receta en la venta con cobertura
+
+**Dado que** se intenta registrar una venta con obra social
+**Cuando** falta el cliente, la receta no está verificada, el cliente no existe, la obra social no existe o está dada de baja, o no hay una caja abierta
+**Entonces** el sistema rechaza la operación con el motivo y no guarda la venta ni descuenta stock
+
+**Dado que** se registra una venta de mostrador sin obra social
+**Cuando** el pedido trae un cliente o la confirmación de receta
+**Entonces** el sistema lo rechaza: las ventas sin cobertura no llevan cliente ni receta
+
 ### Trazabilidad de lotes y vencimientos
 
 **Dado que** un producto tiene múltiples lotes con distintas fechas de vencimiento

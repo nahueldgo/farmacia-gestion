@@ -147,7 +147,7 @@ Decisiones tomadas al construir el registro de ventas de mostrador, la caja mín
 
 ## Cobertura y copago (Módulo 4)
 
-Decisiones tomadas al construir las obras sociales, sus reglas de cobertura y el cálculo del copago, con la alternativa que se descartó en cada caso. Integrar el cálculo al registro de la venta (cliente obligatorio, monto de cobertura guardado y control de la receta) es el paso siguiente.
+Decisiones tomadas al construir las obras sociales, sus reglas de cobertura y el cálculo del copago, con la alternativa que se descartó en cada caso. El último paso integra el cálculo al registro de la venta (cliente obligatorio, monto de cobertura guardado y control de la receta).
 
 **Una regla por obra social y categoría, y sin regla no hay cobertura.** La cobertura se define como un porcentaje de 0 a 100 para cada categoría de medicamento (las del PMO, precargadas) y cada obra social. Si la obra social no tiene regla para la categoría de un producto, o el producto no tiene categoría (perfumería, por ejemplo), se cobra completo. Se descartó asumir el piso del PMO como valor por defecto: cada entidad local decide qué cubre, y un porcentaje que nadie cargó produciría cobros incorrectos. La unicidad (una sola regla por obra social y categoría) la garantiza la base de datos, no solo el código, para que dos pedidos simultáneos no dejen dos reglas.
 
@@ -165,7 +165,17 @@ Decisiones tomadas al construir las obras sociales, sus reglas de cobertura y el
 
 **El cálculo del copago no guarda nada y no controla el stock.** Lo consulta la pantalla de venta cada vez que cambian los productos o la obra social, y la respuesta tiene que ser inmediata. Por eso es un pedido que solo calcula: no crea ventas, no toca los lotes y no revisa si alcanza el stock, que sigue siendo responsabilidad del registro de la venta. Lo usan farmacéutico y auxiliar, y el dueño recibe 403 porque no vende. Se descartó calcular el copago recién al confirmar la venta: la pantalla no podría mostrar el total a cobrar antes de confirmar.
 
-**Pruebas.** Las cuentas del motor (porcentajes, redondeo, estrategia por defecto y una estrategia nueva agregada sin tocar el cálculo), el cálculo de la venta con una base de prueba y los esquemas tienen pruebas automáticas en `backend/tests/` (`pytest`, 90 en total hasta acá). Además se probó cada parte contra la API en marcha con los tres roles, con una tabla de permisos de todos los endpoints de obras sociales, reglas y cálculo del copago.
+**La venta con obra social usa el mismo cálculo que se mostró.** El registro de la venta llama al mismo servicio que `POST /copago/calcular`, y guarda su cobertura y su total a pagar, de modo que lo cobrado es igual a lo que la pantalla le mostró al empleado. Todo va en la misma transacción que el detalle y el descuento de stock: si algo falla, no queda nada. Se descartó volver a calcular la cobertura con otra lógica, o que la mande la pantalla: podrían diferir del cálculo previo o falsearse.
+
+**Cliente y receta obligatorios con obra social, y prohibidos sin ella.** Una venta con cobertura exige un cliente existente (lo respalda también un `CHECK` de la base) y la confirmación de que se verificó la receta, que es lo que `docs/05` define para `receta_verificada`: el control del empleado antes de aplicar el copago. Se aplica a toda venta con obra social, no solo cuando un producto figura como "requiere receta". Se descartó exigirla solo en ese caso: dejaría pasar una venta con cobertura sin ningún control. Una venta de mostrador no lleva cliente ni receta, y si el pedido los trae se rechaza, para que cada dato tenga un solo significado.
+
+**Las reglas del pedido van en el esquema, y las que dependen de la base, en el servicio.** Que falten el cliente o la receta se detecta al validar el pedido (422, antes de tocar la base). Que el cliente o la obra social existan, o que esté dada de baja, lo resuelve el servicio de ventas (404 y 409). Se descartó dejar todo en el servicio, porque el pedido incoherente llegaría a consultar la base sin necesidad.
+
+**El gravado y el exento siguen saliendo del precio de lista.** La cobertura no se reparte entre ellos: baja solo lo que paga el cliente (`total_a_pagar`). Los montos discriminados describen lo que se vendió, y lo que cubre la obra social es una forma de pago. Se descartó repartir la cobertura entre gravado y exento, porque cambiaría los importes de cada línea por un dato que no es del producto.
+
+**Lo que comparten la venta y el copago vive en un módulo aparte.** El error base de negocio, el redondeo a centavos, la suma de líneas repetidas y la validación del producto están en `servicios/base_ventas.py`. Hacía falta porque ahora la venta usa el servicio del copago y este usaba cosas de la venta: sin ese módulo se importarían mutuamente. Se descartó importar dentro de las funciones para esquivar el ciclo, que esconde la dependencia en lugar de ordenarla.
+
+**Pruebas.** Las cuentas del motor (porcentajes, redondeo, estrategia por defecto y una estrategia nueva agregada sin tocar el cálculo), el cálculo de la venta con una base de prueba, las reglas del pedido de venta con cobertura y los esquemas tienen pruebas automáticas en `backend/tests/` (`pytest`, 97 en total hasta acá). Además se probó cada parte contra la API en marcha con los tres roles, con una tabla de permisos de todos los endpoints de obras sociales, reglas, cálculo del copago y venta con obra social.
 
 ## Frontend y cliente de escritorio
 
