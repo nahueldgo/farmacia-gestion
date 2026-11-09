@@ -4,6 +4,8 @@ from sqlmodel import Session, func, select
 
 from models import Producto, Usuario
 
+CLIENTE_NO_ENCONTRADO = "Cliente no encontrado"
+
 
 # Busca por clave primaria; si no existe, responde 404 con el mensaje dado.
 def obtener_o_404(session: Session, modelo, id_objeto: int, mensaje: str):

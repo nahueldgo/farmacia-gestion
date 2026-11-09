@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Optional
 
-from servicios.ventas import DOS_DECIMALES
+from servicios.base_ventas import a_centavos
 
 CERO = Decimal("0")
 CIEN = Decimal("100")
@@ -67,7 +67,7 @@ def calcular_copago(lineas: list[LineaACubrir], estrategia: EstrategiaCobertura)
         if not CERO <= porcentaje <= CIEN:
             raise ValueError(f"El porcentaje de cobertura debe estar entre 0 y 100, y la estrategia dio {porcentaje}")
         # Se redondea cada línea, así la suma de las líneas es siempre igual al total.
-        cobertura = (linea.importe * porcentaje / CIEN).quantize(DOS_DECIMALES, rounding=ROUND_HALF_UP)
+        cobertura = a_centavos(linea.importe * porcentaje / CIEN)
         cubiertas.append(LineaCubierta(linea.importe, porcentaje, cobertura, linea.importe - cobertura))
     return ResultadoCopago(
         lineas=cubiertas,

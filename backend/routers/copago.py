@@ -5,8 +5,8 @@ from db import get_session
 from dependencias import requiere_rol
 from roles import ROLES_OPERATIVOS
 from schemas_copago import CopagoCalcular, CopagoRespuesta, LineaCopagoRespuesta
+from servicios.base_ventas import ErrorDeVenta
 from servicios.copago_venta import CopagoDeVenta, calcular_copago_de_venta
-from servicios.ventas import ErrorDeVenta
 
 router = APIRouter(prefix="/copago", tags=["copago"])
 

@@ -7,8 +7,8 @@ from sqlmodel import Session
 
 from models import CategoriaCoberturaObraSocial, Medicamento, ObraSocial, Producto, ReglaCobertura
 from schemas_ventas import LineaVenta
+from servicios.base_ventas import ProductoDadoDeBaja, ProductoNoEncontrado
 from servicios.copago_venta import ObraSocialDadaDeBaja, ObraSocialNoEncontrada, calcular_copago_de_venta
-from servicios.ventas import ProductoDadoDeBaja, ProductoNoEncontrado
 
 IOMA, OSDE, EXTERNA, DE_BAJA = 1, 2, 3, 4
 AMBULATORIO, CRONICO = 1, 2

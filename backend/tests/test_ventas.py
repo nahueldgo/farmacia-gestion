@@ -8,14 +8,13 @@ from sqlmodel import Session
 
 from models import Venta
 from schemas_ventas import LineaVenta
+from servicios.base_ventas import importe, juntar_lineas
 from servicios.ventas import (
     RangoDeFechasInvalido,
     VentaYaAnulada,
     anular_venta,
     calcular_montos,
     formatear_comprobante,
-    importe,
-    juntar_lineas,
     resolver_periodo,
 )
 

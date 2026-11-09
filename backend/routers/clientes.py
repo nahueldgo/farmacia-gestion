@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlmodel import Session, select
 
-from comun import guardar_o_409
+from comun import CLIENTE_NO_ENCONTRADO, guardar_o_409
 from db import get_session
 from dependencias import requiere_rol
 from models import Cliente
@@ -22,7 +22,7 @@ def buscar_por_dni(
 ):
     cliente = session.exec(select(Cliente).where(Cliente.dni == dni)).first()
     if cliente is None:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+        raise HTTPException(status_code=404, detail=CLIENTE_NO_ENCONTRADO)
     return cliente
 
 

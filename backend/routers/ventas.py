@@ -11,7 +11,8 @@ from fechas import a_hora_argentina
 from models import DetalleVenta, Empleado, Producto, Venta
 from roles import ROLES_OPERATIVOS
 from schemas_ventas import DetalleRespuesta, EstadoVenta, VentaCrear, VentaRespuesta, VentaResumen
-from servicios.ventas import ErrorDeVenta, anular_venta, crear_venta, ventas_del_periodo
+from servicios.base_ventas import ErrorDeVenta
+from servicios.ventas import anular_venta, crear_venta, ventas_del_periodo
 
 router = APIRouter(prefix="/ventas", tags=["ventas"])
 
@@ -44,6 +45,9 @@ def _respuesta(session: Session, venta: Venta) -> VentaRespuesta:
         fecha=a_hora_argentina(venta.fecha),
         empleado_id=venta.empleado_id,
         caja_id=venta.caja_id,
+        obra_social_id=venta.obra_social_id,
+        cliente_id=venta.cliente_id,
+        receta_verificada=venta.receta_verificada,
         medio_pago=venta.medio_pago,
         subtotal=venta.subtotal,
         monto_cobertura=venta.monto_cobertura,

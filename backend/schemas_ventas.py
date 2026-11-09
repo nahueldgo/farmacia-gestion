@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class MedioPago(str, Enum):
@@ -28,6 +28,21 @@ class VentaCrear(BaseModel):
     lineas: list[LineaVenta] = Field(min_length=1)
     # La genera el frontend: si reintenta el mismo pedido, no se duplica la venta.
     clave_operacion: Optional[str] = Field(default=None, min_length=1, max_length=36)
+    # Solo en la venta con cobertura: la obra social, el afiliado y la confirmación de que se controló la receta.
+    obra_social_id: Optional[int] = None
+    cliente_id: Optional[int] = None
+    receta_verificada: bool = False
+
+    @model_validator(mode="after")
+    def _cobertura_coherente(self):
+        if self.obra_social_id is None:
+            if self.cliente_id is not None or self.receta_verificada:
+                raise ValueError("El cliente y la receta solo se indican en una venta con obra social")
+        elif self.cliente_id is None:
+            raise ValueError("Una venta con obra social necesita un cliente")
+        elif not self.receta_verificada:
+            raise ValueError("Una venta con obra social necesita la receta verificada")
+        return self
 
 
 class DetalleRespuesta(BaseModel):
@@ -56,6 +71,9 @@ class VentaRespuesta(BaseModel):
     fecha: datetime
     empleado_id: int
     caja_id: int
+    obra_social_id: Optional[int]
+    cliente_id: Optional[int]
+    receta_verificada: bool
     medio_pago: str
     subtotal: float
     monto_cobertura: float

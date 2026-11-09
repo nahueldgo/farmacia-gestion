@@ -6,8 +6,8 @@ from sqlmodel import Session, select
 
 from models import CategoriaCoberturaObraSocial, Medicamento, ObraSocial, Producto, ReglaCobertura
 from schemas_ventas import LineaVenta
+from servicios.base_ventas import ErrorDeVenta, importe, juntar_lineas, producto_vendible
 from servicios.copago import LineaACubrir, LineaCubierta, calcular_copago, elegir_estrategia
-from servicios.ventas import ErrorDeVenta, importe, juntar_lineas, producto_vendible
 
 
 class ObraSocialNoEncontrada(ErrorDeVenta):
