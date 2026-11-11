@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,11 @@ class CajaAbrir(BaseModel):
     monto_apertura: float = Field(ge=0)
 
 
+class CajaCerrar(BaseModel):
+    monto_declarado: Decimal = Field(ge=0, le=MONTO_MAXIMO, decimal_places=2)
+
+
+# Los datos del cierre vienen en None mientras la caja está abierta.
 class CajaRespuesta(BaseModel):
     id_caja: int
     fecha: date
@@ -26,6 +32,11 @@ class CajaRespuesta(BaseModel):
     hora_apertura: datetime
     monto_apertura: float
     estado: str
+    empleado_cierre_id: Optional[int] = None
+    hora_cierre: Optional[datetime] = None
+    monto_cierre_declarado: Optional[float] = None
+    monto_cierre_sistema: Optional[float] = None
+    diferencia: Optional[float] = None
 
 
 class MovimientoCrear(DatosRecortados):

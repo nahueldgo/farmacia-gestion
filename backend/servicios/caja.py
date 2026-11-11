@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Optional
 
 from sqlmodel import Session, select
 
+from fechas import ahora_utc
 from models import Caja, MovimientoCaja, Venta
 from schemas_caja import TipoMovimiento
 from schemas_ventas import EstadoVenta, MedioPago
@@ -10,6 +12,26 @@ from schemas_ventas import EstadoVenta, MedioPago
 CERO = Decimal("0")
 MOSTRADOR = "mostrador"
 CON_COBERTURA = "con_cobertura"
+ESTADO_ABIERTA = "abierta"
+ESTADO_CERRADA = "cerrada"
+
+
+def _abierta():
+    return select(Caja).where(Caja.estado == ESTADO_ABIERTA)
+
+
+def caja_abierta(session: Session) -> Optional[Caja]:
+    return session.exec(_abierta()).first()
+
+
+# Las ventas y los movimientos toman una marca sobre la fila de la caja y el cierre la bloquea entera: el cierre espera
+# a lo que está en curso y lo cuenta, y lo que llega después encuentra la caja ya cerrada.
+def caja_abierta_para_operar(session: Session) -> Optional[Caja]:
+    return session.exec(_abierta().with_for_update(key_share=True)).first()
+
+
+def caja_abierta_para_cerrar(session: Session) -> Optional[Caja]:
+    return session.exec(_abierta().with_for_update()).first()
 
 
 @dataclass
@@ -63,3 +85,17 @@ def consolidar_caja(session: Session, caja: Caja) -> Consolidado:
     retiros = _total_de_movimientos(movimientos, TipoMovimiento.RETIRO)
     efectivo_esperado = caja.monto_apertura + por_medio_pago[MedioPago.EFECTIVO.value].total_a_pagar + ingresos - retiros
     return Consolidado(total, por_tipo, por_medio_pago, movimientos, ingresos, retiros, efectivo_esperado)
+
+
+# Arqueo: lo contado contra lo que el sistema dice que tendría que haber en efectivo. Una diferencia positiva es un
+# sobrante y una negativa, un faltante. No hace commit: lo hace quien llama.
+def cerrar_caja(session: Session, caja: Caja, id_empleado: int, monto_declarado: Decimal) -> Consolidado:
+    consolidado = consolidar_caja(session, caja)
+    caja.empleado_cierre_id = id_empleado
+    caja.hora_cierre = ahora_utc()
+    caja.monto_cierre_declarado = monto_declarado
+    caja.monto_cierre_sistema = consolidado.efectivo_esperado
+    caja.diferencia = monto_declarado - consolidado.efectivo_esperado
+    caja.estado = ESTADO_CERRADA
+    session.add(caja)
+    return consolidado

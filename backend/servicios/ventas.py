@@ -13,6 +13,7 @@ from fefo import StockInsuficiente, descontar_stock
 from models import Caja, Cliente, CondicionIva, DetalleVenta, Empleado, Producto, Venta
 from schemas_ventas import EstadoVenta, LineaVenta, VentaCrear
 from servicios.base_ventas import ErrorDeVenta, importe, juntar_lineas, producto_vendible
+from servicios.caja import caja_abierta_para_operar
 from servicios.copago_venta import CopagoDeVenta, calcular_copago_de_venta
 
 
@@ -78,7 +79,7 @@ def _venta_ya_registrada(session: Session, clave: Optional[str]) -> Optional[Ven
 
 
 def _caja_abierta(session: Session) -> Caja:
-    caja = session.exec(select(Caja).where(Caja.estado == "abierta")).first()
+    caja = caja_abierta_para_operar(session)
     if caja is None:
         raise SinCajaAbierta("No hay una caja abierta: abrila antes de vender")
     return caja

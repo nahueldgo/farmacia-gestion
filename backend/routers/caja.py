@@ -1,9 +1,8 @@
 from dataclasses import asdict
 from decimal import Decimal
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from comun import empleado_del_usuario, guardar_o_409
 from db import get_session
@@ -13,6 +12,7 @@ from models import Caja, MovimientoCaja
 from roles import ROLES_OPERATIVOS
 from schemas_caja import (
     CajaAbrir,
+    CajaCerrar,
     CajaRespuesta,
     ConsolidadoRespuesta,
     MovimientoCrear,
@@ -21,7 +21,14 @@ from schemas_caja import (
     TotalPorMedioPagoRespuesta,
     TotalPorTipoRespuesta,
 )
-from servicios.caja import Consolidado, consolidar_caja
+from servicios.caja import (
+    Consolidado,
+    caja_abierta,
+    caja_abierta_para_cerrar,
+    caja_abierta_para_operar,
+    cerrar_caja,
+    consolidar_caja,
+)
 
 router = APIRouter(prefix="/caja", tags=["caja"])
 
@@ -30,12 +37,8 @@ YA_HAY_CAJA_ABIERTA = "Ya hay una caja abierta"
 NO_HAY_CAJA_ABIERTA = "No hay una caja abierta"
 
 
-def _caja_abierta(session: Session) -> Optional[Caja]:
-    return session.exec(select(Caja).where(Caja.estado == "abierta")).first()
-
-
 def _caja_abierta_o_404(session: Session) -> Caja:
-    caja = _caja_abierta(session)
+    caja = caja_abierta(session)
     if caja is None:
         raise HTTPException(status_code=404, detail=NO_HAY_CAJA_ABIERTA)
     return caja
@@ -49,6 +52,11 @@ def _respuesta(caja: Caja) -> CajaRespuesta:
         hora_apertura=a_hora_argentina(caja.hora_apertura),
         monto_apertura=caja.monto_apertura,
         estado=caja.estado,
+        empleado_cierre_id=caja.empleado_cierre_id,
+        hora_cierre=None if caja.hora_cierre is None else a_hora_argentina(caja.hora_cierre),
+        monto_cierre_declarado=caja.monto_cierre_declarado,
+        monto_cierre_sistema=caja.monto_cierre_sistema,
+        diferencia=caja.diferencia,
     )
 
 
@@ -80,14 +88,14 @@ def _consolidado_respuesta(caja: Caja, consolidado: Consolidado) -> ConsolidadoR
     )
 
 
-# Sin una caja abierta no se puede vender (venta.caja_id es obligatorio). El cierre va en el Módulo 5.
+# Sin una caja abierta no se puede vender (venta.caja_id es obligatorio).
 @router.post("/abrir", response_model=CajaRespuesta, status_code=201)
 def abrir_caja(
     datos: CajaAbrir,
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_OPERAN_CAJA)),
 ):
-    if _caja_abierta(session):
+    if caja_abierta(session):
         raise HTTPException(status_code=409, detail=YA_HAY_CAJA_ABIERTA)
 
     caja = Caja(
@@ -115,7 +123,7 @@ def registrar_movimiento(
     session: Session = Depends(get_session),
     usuario: dict = Depends(requiere_rol(*ROLES_OPERAN_CAJA)),
 ):
-    caja = _caja_abierta(session)
+    caja = caja_abierta_para_operar(session)
     if caja is None:
         raise HTTPException(status_code=409, detail=f"{NO_HAY_CAJA_ABIERTA}: abrila antes de registrar el movimiento")
 
@@ -130,6 +138,24 @@ def registrar_movimiento(
     session.commit()
     session.refresh(movimiento)
     return _movimiento_respuesta(movimiento)
+
+
+# Cierra la caja abierta con el monto contado. Responde el consolidado final con el arqueo (lo declarado, lo que
+# esperaba el sistema y la diferencia), así que la pantalla arma el resumen con una sola llamada.
+@router.post("/cerrar", response_model=ConsolidadoRespuesta)
+def cerrar_caja_actual(
+    datos: CajaCerrar,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(requiere_rol(*ROLES_OPERAN_CAJA)),
+):
+    caja = caja_abierta_para_cerrar(session)
+    if caja is None:
+        raise HTTPException(status_code=409, detail=f"{NO_HAY_CAJA_ABIERTA}: no hay nada para cerrar")
+
+    consolidado = cerrar_caja(session, caja, empleado_del_usuario(session, usuario), datos.monto_declarado)
+    respuesta = _consolidado_respuesta(caja, consolidado)
+    session.commit()
+    return respuesta
 
 
 @router.get("/actual/consolidado", response_model=ConsolidadoRespuesta)
