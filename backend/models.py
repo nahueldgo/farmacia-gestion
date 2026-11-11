@@ -174,6 +174,18 @@ class Caja(SQLModel, table=True):
     estado: str = "abierta"
 
 
+class MovimientoCaja(SQLModel, table=True):
+    __tablename__ = "movimiento_caja"
+
+    id_movimiento_caja: Optional[int] = Field(default=None, primary_key=True)
+    caja_id: int = Field(foreign_key="caja.id_caja")
+    empleado_id: int = Field(foreign_key="empleado.id_empleado")
+    tipo: str
+    monto: Decimal
+    motivo: str
+    hora: datetime = Field(default_factory=ahora_utc)
+
+
 class Venta(SQLModel, table=True):
     __tablename__ = "venta"
 

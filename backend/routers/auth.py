@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def login(datos: LoginRequest, session: Session = Depends(get_session)):
     mensaje_error = "Usuario o contraseña incorrectos"
 
-    usuario = buscar_usuario(session, datos.nombreUsuario)
+    usuario = buscar_usuario(session, datos.nombre_usuario)
 
     if usuario is None or not verificar_contrasena(datos.contrasena, usuario.contrasena_hash):
         raise HTTPException(status_code=401, detail=mensaje_error)
@@ -36,7 +36,7 @@ def login(datos: LoginRequest, session: Session = Depends(get_session)):
         token=token,
         nombre=empleado.nombre,
         rol=empleado.rol,
-        debeCambiarContrasena=usuario.debe_cambiar_contrasena,
+        debe_cambiar_contrasena=usuario.debe_cambiar_contrasena,
     )
 
 
@@ -63,7 +63,7 @@ def refrescar_token(
         token=nuevo_token,
         nombre=empleado.nombre,
         rol=empleado.rol,
-        debeCambiarContrasena=usuario_db.debe_cambiar_contrasena,
+        debe_cambiar_contrasena=usuario_db.debe_cambiar_contrasena,
     )
 
 
