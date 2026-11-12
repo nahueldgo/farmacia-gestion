@@ -53,7 +53,7 @@ La misma separación entre lógica de negocio y persistencia deja abiertas otras
 
 ## Convenciones de la API
 
-**Nombres de los campos.** Todo usa `snake_case`, igual que las columnas de la base. La única excepción es el login (`nombreUsuario` y `debeCambiarContrasena`), que se definió primero junto con el frontend. Cambiarlo cuando ya funcionaba rompería lo que está andando, así que la unificación queda planificada antes del despliegue y en tres pasos: el backend acepta las dos versiones, el frontend pasa a los nombres con guion bajo y después se eliminan los viejos.
+**Nombres de los campos.** Todo usa `snake_case`, igual que las columnas de la base. La única excepción es el login (`nombreUsuario` y `debeCambiarContrasena`), que se definió primero junto con el frontend. Cambiarlo cuando ya funcionaba rompería lo que está andando, así que la unificación queda planificada antes del despliegue y en tres pasos: el backend acepta las dos versiones, el frontend pasa a los nombres con guion bajo y después se eliminan los viejos. El primer paso ya está hecho: `POST /auth/login` acepta `nombre_usuario` o `nombreUsuario`, y las respuestas del login y del refresh traen `debe_cambiar_contrasena` y `debeCambiarContrasena` con el mismo valor, de modo que el frontend actual sigue funcionando sin cambios. Se descartó cambiar los nombres de una sola vez: el backend y el frontend se actualizan por separado, y habría un tiempo en que no se entenderían.
 
 ## Autenticación y control de acceso (Módulo 1)
 
@@ -176,6 +176,30 @@ Decisiones tomadas al construir las obras sociales, sus reglas de cobertura y el
 **Lo que comparten la venta y el copago vive en un módulo aparte.** El error base de negocio, el redondeo a centavos, la suma de líneas repetidas y la validación del producto están en `servicios/base_ventas.py`. Hacía falta porque ahora la venta usa el servicio del copago y este usaba cosas de la venta: sin ese módulo se importarían mutuamente. Se descartó importar dentro de las funciones para esquivar el ciclo, que esconde la dependencia en lugar de ordenarla.
 
 **Pruebas.** Las cuentas del motor (porcentajes, redondeo, estrategia por defecto y una estrategia nueva agregada sin tocar el cálculo), el cálculo de la venta con una base de prueba, las reglas del pedido de venta con cobertura y los esquemas tienen pruebas automáticas en `backend/tests/` (`pytest`, 97 en total hasta acá). Además se probó cada parte contra la API en marcha con los tres roles, con una tabla de permisos de todos los endpoints de obras sociales, reglas, cálculo del copago y venta con obra social.
+
+## Caja y cierre (Módulo 5)
+
+Decisiones tomadas al construir los movimientos manuales, el consolidado, el cierre con arqueo y el historial de cierres, con la alternativa que se descartó en cada caso. La apertura de la caja y la regla de una sola caja abierta se decidieron antes, en el Módulo 3.
+
+**El consolidado es de la caja, no del día calendario.** Cada caja tiene el suyo: las ventas confirmadas y los movimientos manuales que se hicieron mientras estuvo abierta, sin contar las ventas anuladas. Se descartó consolidar por día calendario: una caja que se abre de noche y se cierra de madrugada, o dos cajas en el mismo día, mezclarían jornadas y el arqueo no cerraría.
+
+**Los movimientos manuales son siempre en efectivo y llevan motivo.** Un ingreso o un retiro tiene un monto mayor a 0, con hasta dos decimales, y un motivo obligatorio de hasta 200 caracteres; quién lo hizo y cuándo salen del servidor. Se descartó permitir otros medios de pago: el arqueo cuenta el efectivo físico, y lo cobrado con tarjeta, transferencia o QR no pasa por el cajón.
+
+**Un retiro puede superar el efectivo de la caja, y lo marca el arqueo.** No se controla que el retiro sea menor al efectivo calculado. Se descartó rechazarlo: el sistema no sabe cuánto hay físicamente, y rechazarlo impediría registrar algo que ya ocurrió. Si el efectivo no alcanzaba, el faltante aparece como diferencia al cerrar.
+
+**La devolución de una venta anulada es un retiro manual.** Anular una venta no mueve la caja: el dinero se devuelve con un retiro con su motivo (por ejemplo, el número de comprobante). Se descartó que la anulación genere el movimiento sola: un cierre ya hecho no se recalcula, y devolver el dinero es una decisión de quien atiende. Es la misma decisión del Módulo 3.
+
+**El efectivo esperado y la diferencia.** El esperado es el fondo de apertura más lo cobrado en efectivo más los ingresos menos los retiros. La tarjeta, la transferencia y el QR no entran, porque ese dinero no está en la caja. La diferencia es lo declarado menos lo esperado: positiva es un sobrante y negativa, un faltante. El cierre guarda el monto declarado, el esperado y la diferencia. Se descartó comparar lo contado contra el total de las ventas, que mezclaría dinero que no está físicamente en la caja.
+
+**Opera la caja el farmacéutico o el auxiliar, y cierra cualquiera de los dos.** Abrir, cerrar y registrar movimientos: farmacéutico y auxiliar. Ver el consolidado y el historial: los tres roles, y el dueño solo mira. La caja guarda quién la abrió y quién la cerró, que no tienen que ser la misma persona. Se descartó que cierre solo quien abrió: en un cambio de turno la caja quedaría abierta si esa persona no está.
+
+**El cierre responde con el consolidado final.** La respuesta trae los totales por tipo y por medio de pago, el esperado, lo declarado y la diferencia, así que la pantalla arma el resumen con una sola llamada. Se descartó responder solo el monto: la pantalla tendría que pedir el consolidado aparte.
+
+**Cerrar bloquea la caja para que ninguna venta quede sin contar.** Las ventas y los movimientos toman una marca compartida sobre la fila de la caja abierta, y el cierre la bloquea por completo. Así el cierre espera a lo que está en curso y lo cuenta, y lo que llega después encuentra la caja cerrada y recibe 409. Como la marca es compartida, las ventas no se esperan entre sí. Se probó con 60 ventas simultáneas mientras se cerraba la caja, tres veces: el cierre contó exactamente las que habían entrado y el resto recibió 409. Se descartó no bloquear: una venta podría guardarse en una caja que ya se cerró y quedar fuera del arqueo. Se descartó también un bloqueo exclusivo en cada venta, que las haría esperar una por una.
+
+**El historial se arma por el día de apertura, con el mismo período que las ventas.** Sin fechas muestra las cajas cerradas de hoy; con una fecha, ese día; con dos, el rango. Va de la más reciente a la más antigua e incluye quién abrió y quién cerró. El día de una caja es el de su apertura (en hora de Argentina). El detalle de cada fila se pide aparte: el consolidado de cualquier caja, abierta o cerrada, por su identificador. Se descartó limitar a una caja por día: una farmacia puede cerrar y volver a abrir en el mismo día, por ejemplo en un cambio de turno.
+
+**Pruebas.** Las cuentas del consolidado y del arqueo, los esquemas de los movimientos y del monto declarado, el historial por período y los nombres del login tienen pruebas automáticas en `backend/tests/` (`pytest`, 155 en total hasta acá). Además se probó una jornada completa contra la API en marcha con los tres roles (apertura, ventas de distintos tipos y medios de pago, una anulación con su devolución, movimientos, cierre con faltante, historial y una caja nueva), con una tabla de permisos de todos los endpoints de caja, y el cierre con ventas simultáneas.
 
 ## Frontend y cliente de escritorio
 

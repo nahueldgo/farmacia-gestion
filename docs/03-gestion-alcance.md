@@ -143,6 +143,30 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** el empleado que cierra la caja declara el monto contado físicamente
 **Entonces** el sistema calcula el monto esperado (ventas de la jornada y movimientos manuales de ingreso o retiro), muestra la diferencia entre el monto declarado y el calculado, y presenta el consolidado de ventas por tipo (mostrador / con cobertura) y por medio de pago (efectivo, tarjeta de crédito, tarjeta de débito, transferencia y QR), sin necesidad de cruzar planillas manualmente
 
+### Ingresos y retiros manuales de efectivo
+
+**Dado que** la caja está abierta
+**Cuando** el auxiliar de farmacia o el Dt. farmacéutico/a registra un ingreso o un retiro de efectivo con su motivo (por ejemplo, el cambio para el mostrador o la devolución del dinero de una venta anulada)
+**Entonces** el sistema lo guarda en esa caja con quién lo hizo y a qué hora, y lo suma o lo resta del efectivo esperado; si no hay una caja abierta, lo rechaza, y el dueño/gerente no puede registrarlos
+
+### Consolidado de una caja
+
+**Dado que** una caja tiene ventas y movimientos manuales
+**Cuando** cualquiera de los tres roles consulta su consolidado, estando la caja abierta o ya cerrada
+**Entonces** el sistema muestra las ventas confirmadas (las anuladas no cuentan) por tipo y por medio de pago, los ingresos y los retiros, y el efectivo esperado: el fondo de apertura más lo cobrado en efectivo más los ingresos menos los retiros, sin contar lo cobrado con tarjeta, transferencia o QR
+
+### Cierre de caja con diferencia
+
+**Dado que** el empleado contó el efectivo que hay en la caja
+**Cuando** el auxiliar de farmacia o el Dt. farmacéutico/a, sea o no quien la abrió, declara el monto contado y cierra la caja
+**Entonces** el sistema guarda quién la cerró, cuándo, el monto declarado, el esperado y la diferencia (positiva si sobra efectivo y negativa si falta), muestra el consolidado final, y no permite registrar más ventas ni movimientos en esa caja hasta abrir otra; el dueño/gerente no puede cerrarla
+
+### Historial de cierres por día
+
+**Dado que** existen cajas cerradas en distintos días
+**Cuando** cualquiera de los tres roles pide el historial sin fechas, con un día o con un rango de fechas
+**Entonces** el sistema lista las cajas cerradas de ese período, de la más reciente a la más antigua, con quién abrió, quién cerró y la diferencia de cada una, y permite ver el consolidado de cualquiera de ellas
+
 ### Reportes históricos
 
 **Dado que** existen ventas registradas en distintos períodos
