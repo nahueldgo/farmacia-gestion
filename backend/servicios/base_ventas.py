@@ -1,4 +1,6 @@
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Optional
 
 from sqlmodel import Session
 
@@ -8,7 +10,7 @@ from schemas_ventas import LineaVenta
 DOS_DECIMALES = Decimal("0.01")
 
 
-# Lo que comparten el registro de la venta y el cálculo del copago.
+# Lo que comparten el registro de la venta, el cálculo del copago y los listados por período (ventas y cierres de caja).
 # Errores de negocio: el router los convierte en la respuesta HTTP que indica cada uno.
 class ErrorDeVenta(Exception):
     estado_http = 422
@@ -16,6 +18,10 @@ class ErrorDeVenta(Exception):
     def __init__(self, mensaje: str):
         self.mensaje = mensaje
         super().__init__(mensaje)
+
+
+class RangoDeFechasInvalido(ErrorDeVenta):
+    estado_http = 422
 
 
 class ProductoNoEncontrado(ErrorDeVenta):
@@ -33,6 +39,15 @@ def a_centavos(monto: Decimal) -> Decimal:
 
 def importe(precio: Decimal, cantidad: int) -> Decimal:
     return a_centavos(precio * cantidad)
+
+
+# Sin fechas, las de hoy. Con una sola, ese día. Con las dos, todos los días entre ellas.
+def resolver_periodo(desde: Optional[date], hasta: Optional[date], dia_actual: date) -> tuple[date, date]:
+    primer_dia = desde or hasta or dia_actual
+    ultimo_dia = hasta or primer_dia
+    if ultimo_dia < primer_dia:
+        raise RangoDeFechasInvalido("La fecha hasta no puede ser anterior a la fecha desde")
+    return primer_dia, ultimo_dia
 
 
 # Si un producto viene en dos líneas, se suman: así se descuenta y se bloquea una sola vez.

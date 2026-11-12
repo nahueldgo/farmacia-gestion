@@ -39,6 +39,12 @@ class CajaRespuesta(BaseModel):
     diferencia: Optional[float] = None
 
 
+# Una fila del historial de cierres: la caja con el nombre de quien la abrió y de quien la cerró.
+class CierreResumen(CajaRespuesta):
+    empleado_apertura: str
+    empleado_cierre: str
+
+
 class MovimientoCrear(DatosRecortados):
     tipo: TipoMovimiento
     monto: Decimal = Field(gt=0, le=MONTO_MAXIMO, decimal_places=2)

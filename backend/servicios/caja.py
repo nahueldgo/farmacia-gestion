@@ -1,13 +1,16 @@
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy.orm import aliased
 from sqlmodel import Session, select
 
-from fechas import ahora_utc
-from models import Caja, MovimientoCaja, Venta
+from fechas import ahora_utc, hoy
+from models import Caja, Empleado, MovimientoCaja, Venta
 from schemas_caja import TipoMovimiento
 from schemas_ventas import EstadoVenta, MedioPago
+from servicios.base_ventas import resolver_periodo
 
 CERO = Decimal("0")
 MOSTRADOR = "mostrador"
@@ -99,3 +102,20 @@ def cerrar_caja(session: Session, caja: Caja, id_empleado: int, monto_declarado:
     caja.estado = ESTADO_CERRADA
     session.add(caja)
     return consolidado
+
+
+# Las cajas cerradas de un período, de la más reciente a la más antigua, con quién la abrió y quién la cerró.
+# El día de una caja es el de su apertura. Sin fechas, las de hoy; con una sola, ese día; con las dos, todo el rango.
+def cierres_del_periodo(
+    session: Session, desde: Optional[date], hasta: Optional[date]
+) -> list[tuple[Caja, Empleado, Empleado]]:
+    primer_dia, ultimo_dia = resolver_periodo(desde, hasta, hoy())
+    abrio, cerro = aliased(Empleado), aliased(Empleado)
+    consulta = (
+        select(Caja, abrio, cerro)
+        .join(abrio, Caja.empleado_apertura_id == abrio.id_empleado)
+        .join(cerro, Caja.empleado_cierre_id == cerro.id_empleado)
+        .where(Caja.estado == ESTADO_CERRADA, Caja.fecha >= primer_dia, Caja.fecha <= ultimo_dia)
+        .order_by(Caja.fecha.desc(), Caja.id_caja.desc())
+    )
+    return session.exec(consulta).all()

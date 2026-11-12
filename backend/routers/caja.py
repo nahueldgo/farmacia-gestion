@@ -1,19 +1,22 @@
 from dataclasses import asdict
+from datetime import date
 from decimal import Decimal
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from comun import empleado_del_usuario, guardar_o_409
+from comun import empleado_del_usuario, guardar_o_409, obtener_o_404
 from db import get_session
 from dependencias import obtener_usuario_actual, requiere_rol
 from fechas import a_hora_argentina, ahora_utc, hoy
-from models import Caja, MovimientoCaja
+from models import Caja, Empleado, MovimientoCaja
 from roles import ROLES_OPERATIVOS
 from schemas_caja import (
     CajaAbrir,
     CajaCerrar,
     CajaRespuesta,
+    CierreResumen,
     ConsolidadoRespuesta,
     MovimientoCrear,
     MovimientoRespuesta,
@@ -21,12 +24,14 @@ from schemas_caja import (
     TotalPorMedioPagoRespuesta,
     TotalPorTipoRespuesta,
 )
+from servicios.base_ventas import RangoDeFechasInvalido
 from servicios.caja import (
     Consolidado,
     caja_abierta,
     caja_abierta_para_cerrar,
     caja_abierta_para_operar,
     cerrar_caja,
+    cierres_del_periodo,
     consolidar_caja,
 )
 
@@ -35,6 +40,7 @@ router = APIRouter(prefix="/caja", tags=["caja"])
 ROLES_OPERAN_CAJA = ROLES_OPERATIVOS
 YA_HAY_CAJA_ABIERTA = "Ya hay una caja abierta"
 NO_HAY_CAJA_ABIERTA = "No hay una caja abierta"
+CAJA_NO_ENCONTRADA = "Caja no encontrada"
 
 
 def _caja_abierta_o_404(session: Session) -> Caja:
@@ -57,6 +63,14 @@ def _respuesta(caja: Caja) -> CajaRespuesta:
         monto_cierre_declarado=caja.monto_cierre_declarado,
         monto_cierre_sistema=caja.monto_cierre_sistema,
         diferencia=caja.diferencia,
+    )
+
+
+def _cierre_resumen(caja: Caja, abrio: Empleado, cerro: Empleado) -> CierreResumen:
+    return CierreResumen(
+        **_respuesta(caja).model_dump(),
+        empleado_apertura=f"{abrio.nombre} {abrio.apellido}",
+        empleado_cierre=f"{cerro.nombre} {cerro.apellido}",
     )
 
 
@@ -164,4 +178,30 @@ def consolidado_actual(
     usuario: dict = Depends(obtener_usuario_actual),
 ):
     caja = _caja_abierta_o_404(session)
+    return _consolidado_respuesta(caja, consolidar_caja(session, caja))
+
+
+# Historial de cierres: las cajas cerradas de un día de Argentina (por defecto, hoy) o de un rango con desde y hasta.
+@router.get("/cierres", response_model=list[CierreResumen])
+def historial_de_cierres(
+    desde: Optional[date] = None,
+    hasta: Optional[date] = None,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    try:
+        filas = cierres_del_periodo(session, desde, hasta)
+    except RangoDeFechasInvalido as error:
+        raise HTTPException(status_code=error.estado_http, detail=error.mensaje)
+    return [_cierre_resumen(caja, abrio, cerro) for caja, abrio, cerro in filas]
+
+
+# El consolidado de cualquier caja, abierta o cerrada: para ver el detalle de un cierre del historial.
+@router.get("/{id_caja}/consolidado", response_model=ConsolidadoRespuesta)
+def consolidado_de_una_caja(
+    id_caja: int,
+    session: Session = Depends(get_session),
+    usuario: dict = Depends(obtener_usuario_actual),
+):
+    caja = obtener_o_404(session, Caja, id_caja, CAJA_NO_ENCONTRADA)
     return _consolidado_respuesta(caja, consolidar_caja(session, caja))

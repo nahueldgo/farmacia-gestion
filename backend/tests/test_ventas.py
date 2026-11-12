@@ -8,15 +8,8 @@ from sqlmodel import Session
 
 from models import Venta
 from schemas_ventas import LineaVenta
-from servicios.base_ventas import importe, juntar_lineas
-from servicios.ventas import (
-    RangoDeFechasInvalido,
-    VentaYaAnulada,
-    anular_venta,
-    calcular_montos,
-    formatear_comprobante,
-    resolver_periodo,
-)
+from servicios.base_ventas import RangoDeFechasInvalido, importe, juntar_lineas, resolver_periodo
+from servicios.ventas import VentaYaAnulada, anular_venta, calcular_montos, formatear_comprobante
 
 HOY = date(2026, 10, 29)
 

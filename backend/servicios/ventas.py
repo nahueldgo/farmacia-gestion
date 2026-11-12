@@ -12,7 +12,7 @@ from fechas import ahora_utc, hoy, rango_utc_del_dia
 from fefo import StockInsuficiente, descontar_stock
 from models import Caja, Cliente, CondicionIva, DetalleVenta, Empleado, Producto, Venta
 from schemas_ventas import EstadoVenta, LineaVenta, VentaCrear
-from servicios.base_ventas import ErrorDeVenta, importe, juntar_lineas, producto_vendible
+from servicios.base_ventas import ErrorDeVenta, importe, juntar_lineas, producto_vendible, resolver_periodo
 from servicios.caja import caja_abierta_para_operar
 from servicios.copago_venta import CopagoDeVenta, calcular_copago_de_venta
 
@@ -27,10 +27,6 @@ class ClienteNoEncontrado(ErrorDeVenta):
 
 class StockInsuficienteDe(ErrorDeVenta):
     estado_http = 409
-
-
-class RangoDeFechasInvalido(ErrorDeVenta):
-    estado_http = 422
 
 
 class VentaYaAnulada(ErrorDeVenta):
@@ -178,15 +174,6 @@ def crear_venta(session: Session, id_empleado: int, datos: VentaCrear) -> tuple[
 
     session.refresh(venta)
     return venta, True
-
-
-# Sin fechas, las de hoy. Con una sola, ese día. Con las dos, todos los días entre ellas.
-def resolver_periodo(desde: Optional[date], hasta: Optional[date], dia_actual: date) -> tuple[date, date]:
-    primer_dia = desde or hasta or dia_actual
-    ultimo_dia = hasta or primer_dia
-    if ultimo_dia < primer_dia:
-        raise RangoDeFechasInvalido("La fecha hasta no puede ser anterior a la fecha desde")
-    return primer_dia, ultimo_dia
 
 
 # Las ventas de un período (días de Argentina), de la más reciente a la más antigua, con quien las hizo.
