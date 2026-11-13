@@ -3,8 +3,9 @@ from datetime import date
 from pydantic import BaseModel
 
 
-# tickets es en cuántas ventas apareció el producto; importe, lo que facturó, con el IVA incluido (como se vendió) y al
-# precio de lista; porcentaje_facturacion, qué parte de lo facturado en el período es suya.
+# tickets es en cuántas ventas apareció el producto; importe, lo que facturó, al precio final de lista tal como se vendió
+# (con el IVA en los productos gravados y sin IVA en los exentos); porcentaje_facturacion, qué parte de lo facturado en
+# el período es suya.
 class ProductoDelReporte(BaseModel):
     producto_id: int
     producto: str

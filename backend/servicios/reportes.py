@@ -45,7 +45,8 @@ def _confirmadas_entre(primer_dia: date, ultimo_dia: date) -> tuple:
 
 
 # Por producto: en cuántas ventas apareció, cuántas unidades se vendieron y cuánto facturó. Los importes salen del
-# detalle de cada venta (el precio de ese momento, con IVA incluido y sin descontar la cobertura), no del precio actual.
+# detalle de cada venta (el precio final de ese momento, con el IVA que lleve cada producto y sin descontar la cobertura),
+# no del precio actual.
 # Va del que más facturó al que menos. Sin fechas, hoy; con una sola, ese día; con las dos, todos los días del rango.
 def ventas_por_producto(session: Session, desde: Optional[date], hasta: Optional[date]) -> VentasPorProducto:
     primer_dia, ultimo_dia = resolver_periodo(desde, hasta, hoy())

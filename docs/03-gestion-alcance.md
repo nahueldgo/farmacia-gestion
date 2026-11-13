@@ -173,6 +173,24 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 **Cuando** el dueño/a o gerente filtra por día, mes o período
 **Entonces** el sistema muestra la cantidad de tickets por producto y los porcentajes de facturación correspondientes
 
+### Importes y ventas que cuentan en los reportes
+
+**Dado que** una venta se hizo con un precio que después cambió, o con cobertura de obra social, o fue anulada
+**Cuando** el dueño/a o gerente consulta un reporte
+**Entonces** el sistema calcula los importes con el precio final al que se vendió cada producto (que incluye el IVA en los productos gravados y no lo lleva en los exentos, como los medicamentos, y sin descontar lo que cubrió la obra social), no con el precio actual, y no cuenta las ventas anuladas
+
+### Períodos de los reportes en hora de Argentina
+
+**Dado que** una venta se hizo cerca de la medianoche, por ejemplo a las 23:30 del último día del mes
+**Cuando** el dueño/a o gerente consulta el reporte de ese día o de ese mes
+**Entonces** la venta figura en el día y el mes en que se hizo según la hora de Argentina, y no en el siguiente; sin fechas, el reporte muestra las ventas de hoy
+
+### Quién consulta los reportes
+
+**Dado que** el auxiliar de farmacia, el Dt. farmacéutico/a y el dueño/gerente tienen cada uno su usuario
+**Cuando** intentan consultar un reporte
+**Entonces** el sistema se lo permite solo al dueño/gerente y se lo rechaza al auxiliar y al farmacéutico
+
 ### Inicio de sesión y acceso al sistema
 
 **Dado que** un empleado tiene un usuario activo con su contraseña
@@ -192,6 +210,10 @@ El sistema permite configurar estos porcentajes por categoría de medicamento y 
 ## Justificación de lo que queda fuera de esta versión
 
 - **Integración con validadores formales de obras sociales (IMED, COFA, y los propios de obras sociales grandes).** Requeriría que la farmacia esté homologada por cada entidad, y las entidades locales o gremiales que motivan este proyecto no están integradas a esos validadores. Además, no existe una API pública y gratuita para validar coberturas de obras sociales locales/gremiales: se investigó activamente y se descartó esa posibilidad (ver supuestos en [Análisis de Riesgos, Supuestos y Restricciones](./01-analisis-riesgos-supuestos-restricciones.md)). El diseño queda preparado para incorporar validadores a futuro (ver [Decisiones de Arquitectura](./04-decisiones-de-arquitectura.md#diseño-extensible-patrón-strategy-y-extensiones-futuras)).
+- **Vademécum y planes de cada obra social.** En la práctica, cada entidad cubre una nómina de medicamentos (su vademécum), que puede cambiar según el plan del afiliado, por ejemplo materno infantil o ambulatorio, cada uno con sus propios porcentajes (ver [OSUNL](https://www.osunl.org.ar/cobertura/buscadores/medicamentos/) y [OSPICA](https://www.ospica.org.ar/pmo/)); la Cámara de Farmacias de la Provincia de Córdoba publica [más de cuarenta vademécums descargables](https://www.camaracba.org.ar/vademecums/), uno por entidad. El sistema modela un porcentaje por obra social y por categoría de medicamento, y supone que todo medicamento de la categoría está cubierto. Es una decisión de alcance que se planteó desde la propuesta inicial al tutor, un descuento configurable por obra social que luego se afinó por categoría de medicamento a partir de los pisos del PMO, y una simplificación deliberada de la metodología: la categoría ya captura el piso del PMO y lo que cada entidad mejora, y cargar el vademécum completo de cada obra social no entraba en el plazo ni en el alcance del proyecto. Queda como extensión futura posible: la cobertura por vademécum y por plan, que entraría como una estrategia nueva del motor de cobertura sin tocar el resto (ver [Decisiones de Arquitectura](./04-decisiones-de-arquitectura.md#diseño-extensible-patrón-strategy-y-extensiones-futuras)).
+- **Precio de referencia.** Algunas entidades calculan su porcentaje sobre un precio de referencia acordado, por ejemplo con el Colegio de Farmacéuticos ([OSUNL](https://www.osunl.org.ar/cobertura/buscadores/medicamentos/)), o sobre el precio de venta que fija el propio programa ([PAMI](https://www.pami.org.ar/medicamentos)), y no sobre el precio de la farmacia. El sistema aplica el porcentaje al precio de lista del producto: es una aproximación razonable para las obras sociales locales y gremiales que motivan el proyecto, y puede diferir del monto exacto cuando la entidad usa un precio de referencia. Queda como extensión futura posible, también como una estrategia nueva del motor de cobertura.
+- **Planes especiales con trámite previo.** Las coberturas específicas, por ejemplo de diabetes, oncología o materno infantil, pueden requerir una tramitación previa ante la obra social ([OSUNL](https://www.osunl.org.ar/cobertura/buscadores/medicamentos/)). El sistema controla que se haya verificado la receta, pero no gestiona esa autorización.
+- **Catálogo completo de clases terapéuticas.** El catálogo inicial se simplificó a 18 clases comunes (analgésico, antibiótico, antihipertensivo, etc.), mientras que un vademécum real usa casi doscientas acciones farmacológicas distintas (el de OSPIM, publicado por la [Cámara de Farmacias de la Provincia de Córdoba](https://www.camaracba.org.ar/vademecums/), tiene 191). Por eso varias clases quedaron pendientes: los medicamentos que no encajan en ninguna de las 18, como la levotiroxina (terapéutica tiroidea), el baclofeno (antiespástico), los anticonvulsivos o los antineoplásicos hormonales, se cargan sin clase, algo que el modelo permite porque la clase es opcional. Ampliar el catálogo queda como extensión futura posible.
 - **Tienda online y aplicación móvil.** El sistema es el software de gestión interna de la farmacia, no una herramienta de venta a clientes finales. La tienda online queda como extensión futura posible sobre el mismo backend (ver Decisiones de Arquitectura).
 - **Modo offline.** Se documenta como riesgo aceptado y como extensión futura (ver Análisis de Riesgos, Supuestos y Restricciones, y Decisiones de Arquitectura).
 - **Facturación electrónica / integración con AFIP.** Ver la restricción legal/normativa en Análisis de Riesgos, Supuestos y Restricciones.
