@@ -7,6 +7,7 @@ export const menuPorRol: Record<string, ItemMenu[]> = {
     auxiliar: [
     { label: 'Ventas', path: '/ventas' },
     { label: 'Stock', path: '/stock' },
+    { label: 'Caja', path: '/caja' },
   ],
   farmaceutico: [
     { label: 'Ventas', path: '/ventas' },
