@@ -26,7 +26,7 @@ export function Login() {
       const respuesta = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombreUsuario, contrasena }),
+        body: JSON.stringify({ nombre_usuario: nombreUsuario, contrasena }),
       });
 
       if (respuesta.status === 401) {
@@ -40,8 +40,9 @@ export function Login() {
       }
 
       const datos = await respuesta.json();
-      login(datos.nombre, datos.rol as Rol, datos.token, Boolean(datos.debeCambiarContrasena));
-      navigate(datos.debeCambiarContrasena ? '/cambiar-contrasena' : '/');
+      const debeCambiar = Boolean(datos.debe_cambiar_contrasena);
+      login(datos.nombre, datos.rol as Rol, datos.token, debeCambiar);
+      navigate(debeCambiar ? '/cambiar-contrasena' : '/');
     } catch {
       setError('No se pudo conectar con el servidor. Revisá tu conexión.');
     } finally {

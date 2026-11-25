@@ -60,7 +60,8 @@ export function CambiarContrasena() {
 
       // El backend devuelve lo mismo que el login, con un token ya habilitado
       const datos = await respuesta.json();
-      login(datos.nombre, datos.rol as Rol, datos.token, Boolean(datos.debeCambiarContrasena));
+      // Si el cambio salió bien, ya no tiene el cambio pendiente
+      login(datos.nombre, datos.rol as Rol, datos.token, false);
       navigate('/');
     } catch {
       setError('No se pudo conectar con el servidor. Revisá tu conexión.');
