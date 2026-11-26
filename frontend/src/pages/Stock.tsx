@@ -6,6 +6,7 @@ import { FormularioProducto } from '../components/FormularioProducto';
 import { FormularioMedicamento, type DatosMedicamento } from '../components/FormularioMedicamento';
 import { FormularioEditarProducto } from '../components/FormularioEditarProducto';
 import { FormularioEditarLote } from '../components/FormularioEditarLote';
+import { PanelAlertas } from '../components/PanelAlertas';
 
 interface Producto {
   id_producto: number;
@@ -125,6 +126,10 @@ export function Stock() {
 
   // Solo el farmaceutico corrige o ajusta lotes
   const puedeEditarLote = usuario?.rol === 'farmaceutico';
+
+  // Solo el farmaceutico ve las alertas (el resto recibe 403)
+  const puedeVerAlertas = usuario?.rol === 'farmaceutico';
+
   const [loteEnEdicion, setLoteEnEdicion] = useState<{
     lote: Lote;
     modo: 'corregir' | 'ajustar';
@@ -241,7 +246,9 @@ export function Stock() {
     <div>
       <h2>Stock</h2>
 
+      {puedeVerAlertas && token && <PanelAlertas token={token} />}
       {puedeAgregarProducto && !mostrarAltaProducto && (
+        
         <p>
           <button onClick={() => setMostrarAltaProducto(true)}>Nuevo producto</button>
         </p>
