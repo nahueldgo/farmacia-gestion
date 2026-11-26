@@ -5,6 +5,7 @@ import { FormularioLote } from '../components/FormularioLote';
 import { FormularioProducto } from '../components/FormularioProducto';
 import { FormularioMedicamento, type DatosMedicamento } from '../components/FormularioMedicamento';
 import { FormularioEditarProducto } from '../components/FormularioEditarProducto';
+import { FormularioEditarLote } from '../components/FormularioEditarLote';
 
 interface Producto {
   id_producto: number;
@@ -122,6 +123,13 @@ export function Stock() {
   const puedeEditarProducto = usuario?.rol === 'farmaceutico';
   const [editando, setEditando] = useState<Producto | null>(null);
 
+  // Solo el farmaceutico corrige o ajusta lotes
+  const puedeEditarLote = usuario?.rol === 'farmaceutico';
+  const [loteEnEdicion, setLoteEnEdicion] = useState<{
+    lote: Lote;
+    modo: 'corregir' | 'ajustar';
+  } | null>(null);
+
   const cargar = useCallback(async () => {
     if (!token) return;
     setCargando(true);
@@ -192,6 +200,7 @@ export function Stock() {
     setLotes([]);
     setErrorLotes('');
     setMostrarAlta(false);
+    setLoteEnEdicion(null);
   }
 
   return (
@@ -367,6 +376,21 @@ export function Stock() {
             />
           )}
 
+          {loteEnEdicion && token && (
+            <FormularioEditarLote
+              key={`${loteEnEdicion.lote.id_lote}-${loteEnEdicion.modo}`}
+              token={token}
+              lote={loteEnEdicion.lote}
+              modo={loteEnEdicion.modo}
+              alGuardar={() => {
+                setLoteEnEdicion(null);
+                cargarLotes();
+                cargar();
+              }}
+              alCancelar={() => setLoteEnEdicion(null)}
+            />
+          )}
+
           {errorLotes ? (
             <p style={{ color: 'crimson' }}>{errorLotes}</p>
           ) : cargandoLotes ? (
@@ -381,6 +405,7 @@ export function Stock() {
                   <th>Vencimiento</th>
                   <th>Cantidad</th>
                   <th>Estado</th>
+                  {puedeEditarLote && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -392,6 +417,16 @@ export function Stock() {
                       <td>{formatearFecha(l.fecha_vencimiento)}</td>
                       <td>{l.cantidad}</td>
                       <td style={{ color: estado.color }}>{estado.texto}</td>
+                      {puedeEditarLote && (
+                        <td>
+                          <button onClick={() => setLoteEnEdicion({ lote: l, modo: 'corregir' })}>
+                            Corregir
+                          </button>{' '}
+                          <button onClick={() => setLoteEnEdicion({ lote: l, modo: 'ajustar' })}>
+                            Ajustar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
