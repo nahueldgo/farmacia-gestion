@@ -286,3 +286,18 @@ Como verificación final, se corrió el esquema completo contra una instancia re
 Se aprovechó esta revisión para llevar al DDL dos validaciones que estaban documentadas pero no se habían implementado: el `CHECK` de `tipo_producto` en `producto` (con los valores `'medicamento'`, `'perfumeria'`, `'cuidado_personal'`, `'otro'`) y los `CHECK` de `medio_pago` y `estado` en `venta`.
 
 El DDL de las cuatro tablas nuevas está en `database/00_laboratorio.sql`, `database/00_principio_activo.sql`, `database/00_condicion_iva.sql` y `database/00_forma_farmaceutica.sql`, y corren antes que `03_producto.sql` y `07_medicamento.sql` por el prefijo `00_`, ya que estos últimos ahora dependen de ellas por clave foránea.
+
+## 20. Corrección del tutor: un script general para crear la base
+
+**Pedido:** mantener la separación en un script por tabla y sumar un script general que los ejecute a todos, para crear la base completa de una sola vez; en bash si el entorno de despliegue es Linux.
+
+**Decisión:** `scripts/crear_base.sh` ejecuta con `psql` todos los archivos de `database/` en orden de nombre, el mismo que usa Docker al crear la base local. Es de bash porque el despliegue es en Linux.
+
+- **Todo o nada.** Corre en una sola transacción y se detiene en el primer error, así la base no queda a medio crear.
+- **Sin lista de archivos.** Toma todos los `.sql` de la carpeta, por lo que un archivo nuevo entra sin modificar el script.
+- **Fuera de `database/`.** Docker ejecuta todo lo que hay en esa carpeta al crear la base, incluidos los `.sh`.
+- **Finales de línea.** `.gitattributes` fija los de Linux en los `.sh`, porque con los de Windows bash falla.
+
+**Se descartó** unir todas las tablas en un único archivo SQL: duplicaría el código y habría que mantener dos versiones.
+
+**Verificación:** sobre una base vacía quedan las 19 tablas, con la misma estructura que la base local, y los datos iniciales. Una segunda corrida falla sin cambiar nada, y si falla en la última tabla no queda nada creado.
