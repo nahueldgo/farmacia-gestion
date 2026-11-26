@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ResumenCaja, type ConsolidadoCaja } from '../components/ResumenCaja';
 import { FormularioMovimientoCaja } from '../components/FormularioMovimientoCaja';
 import { CierreCaja } from '../components/CierreCaja';
+import { HistorialCierres } from '../components/HistorialCierres';
 
 function mensajeDeError(datos: unknown, porDefecto: string) {
   const detail = (datos as { detail?: unknown })?.detail;
@@ -176,6 +177,8 @@ export function Caja() {
           )}
         </div>
       )}
+
+      {token && <HistorialCierres token={token} />}
     </div>
   );
 }
