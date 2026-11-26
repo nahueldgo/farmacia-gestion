@@ -3,7 +3,7 @@ from sqlmodel import Session
 
 from comun import buscar_usuario, usuario_del_token
 from db import get_session
-from dependencias import obtener_usuario_actual, obtener_usuario_para_cambio, requiere_rol
+from dependencias import obtener_usuario_actual, obtener_usuario_para_cambio
 from fechas import ahora_utc
 from models import Empleado
 from schemas_auth import CambiarContrasenaPropia, LoginRequest, LoginResponse
@@ -91,9 +91,3 @@ def cambiar_contrasena_propia(
     token = crear_token(usuario_db.nombre_usuario, empleado.rol)
 
     return LoginResponse(token=token, nombre=empleado.nombre, rol=empleado.rol)
-
-
-# Endpoint de PRUEBA para demostrar requiere_rol; eliminar antes de desplegar.
-@router.get("/solo-dueno")
-def solo_dueno(usuario: dict = Depends(requiere_rol("dueno"))):
-    return {"mensaje": "Tenés acceso", "usuario": usuario}

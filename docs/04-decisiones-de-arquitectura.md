@@ -71,7 +71,7 @@ Decisiones tomadas al construir el login, la gestión de empleados y los permiso
 
 **Mismo mensaje de error ante usuario inexistente y contraseña incorrecta.** Se evita así revelar qué nombres de usuario existen en el sistema.
 
-**CORS abierto durante el desarrollo.** La API acepta pedidos de cualquier origen para facilitar las pruebas locales. Es un riesgo aceptado y temporal: debe restringirse a los orígenes reales antes del despliegue.
+**CORS limitado a la aplicación de escritorio.** La API acepta pedidos de navegador solo desde `http://localhost:5173` (desarrollo) y `null` (la aplicación instalada, que carga la página desde un archivo). La lista se puede reemplazar con la variable de entorno `ORIGENES_PERMITIDOS`, para ajustarla en el despliegue sin tocar el código. Se descartó mantener `*`, que permitía llamar a la API desde cualquier página. Permitir `null` es un riesgo aceptado, porque otras páginas abiertas desde un archivo informan el mismo origen: CORS no reemplaza la autenticación, y los datos siguen protegidos por el token.
 
 **Edición de empleados con límites.** El dueño puede corregir nombre, apellido, rol, email, matrícula y fecha de ingreso, enviando solo lo que cambia. No se pueden editar el DNI ni el nombre de usuario: identifican a la persona y a su acceso, y las ventas y los movimientos de caja los referencian, así que cambiarlos rompería la trazabilidad de quién hizo cada operación. El email vive en el usuario y no puede repetirse con el de otro.
 
