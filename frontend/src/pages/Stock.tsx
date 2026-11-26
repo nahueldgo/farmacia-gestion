@@ -130,6 +130,11 @@ export function Stock() {
     modo: 'corregir' | 'ajustar';
   } | null>(null);
 
+  // Retiro de lote (con confirmación en la página)
+  const [loteARetirar, setLoteARetirar] = useState<Lote | null>(null);
+  const [retirando, setRetirando] = useState(false);
+  const [errorRetiro, setErrorRetiro] = useState('');
+
   const cargar = useCallback(async () => {
     if (!token) return;
     setCargando(true);
@@ -201,6 +206,35 @@ export function Stock() {
     setErrorLotes('');
     setMostrarAlta(false);
     setLoteEnEdicion(null);
+    setLoteARetirar(null);
+    setErrorRetiro('');
+  }
+
+  async function retirarLote() {
+    if (!token || !loteARetirar) return;
+    setRetirando(true);
+    setErrorRetiro('');
+    try {
+      const respuesta = await fetch(`${API_URL}/lotes/${loteARetirar.id_lote}/retirar`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (respuesta.status === 401) {
+        setErrorRetiro('Tu sesión venció. Volvé a iniciar sesión.');
+      } else if (respuesta.status === 403) {
+        setErrorRetiro('No tenés permiso para retirar lotes.');
+      } else if (!respuesta.ok) {
+        setErrorRetiro('No se pudo retirar el lote.');
+      } else {
+        setLoteARetirar(null);
+        cargarLotes();
+        cargar();
+      }
+    } catch {
+      setErrorRetiro('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setRetirando(false);
+    }
   }
 
   return (
@@ -391,6 +425,22 @@ export function Stock() {
             />
           )}
 
+          {loteARetirar && (
+            <div style={{ margin: '16px 0' }}>
+              <p>
+                ¿Retirar el lote <strong>{loteARetirar.numero_lote}</strong>? Se van a descontar{' '}
+                {loteARetirar.cantidad} unidades del stock. El lote no se borra: queda con cantidad 0.
+              </p>
+              {errorRetiro && <p style={{ color: 'crimson' }}>{errorRetiro}</p>}
+              <button onClick={retirarLote} disabled={retirando}>
+                {retirando ? 'Retirando...' : 'Sí, retirar'}
+              </button>{' '}
+              <button onClick={() => setLoteARetirar(null)} disabled={retirando}>
+                Cancelar
+              </button>
+            </div>
+          )}
+
           {errorLotes ? (
             <p style={{ color: 'crimson' }}>{errorLotes}</p>
           ) : cargandoLotes ? (
@@ -425,6 +475,20 @@ export function Stock() {
                           <button onClick={() => setLoteEnEdicion({ lote: l, modo: 'ajustar' })}>
                             Ajustar
                           </button>
+                          {l.cantidad > 0 && (
+                            <>
+                              {' '}
+                              <button
+                                onClick={() => {
+                                  setLoteEnEdicion(null);
+                                  setErrorRetiro('');
+                                  setLoteARetirar(l);
+                                }}
+                              >
+                                Retirar
+                              </button>
+                            </>
+                          )}
                         </td>
                       )}
                     </tr>
