@@ -208,7 +208,7 @@ export function Ventas() {
       <div>
         <h2>Ventas</h2>
         <p>Tu rol solo puede consultar las ventas.</p>
-        {token && <ListadoVentas token={token} version={versionVentas} />}
+        {token && <ListadoVentas token={token} version={versionVentas} puedeAnular={false} />}
       </div>
     );
   }
@@ -323,7 +323,7 @@ export function Ventas() {
         </div>
       </div>
 
-      {token && <ListadoVentas token={token} version={versionVentas} />}
+        {token && <ListadoVentas token={token} version={versionVentas} puedeAnular={true} />}
     </div>
   );
 }

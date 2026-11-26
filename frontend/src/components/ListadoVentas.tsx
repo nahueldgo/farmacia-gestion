@@ -15,6 +15,8 @@ interface Props {
   token: string;
   // Cuando cambia este número, el listado se vuelve a pedir (por ejemplo, después de vender)
   version: number;
+  // Solo farmaceutico y auxiliar anulan (el backend le responde 403 al dueño)
+  puedeAnular: boolean;
 }
 
 function formatearMonto(valor: number) {
@@ -29,7 +31,7 @@ function nombreMedioPago(medio: string) {
   return medio.replace('_', ' ');
 }
 
-export function ListadoVentas({ token, version }: Props) {
+export function ListadoVentas({ token, version, puedeAnular }: Props) {
   const [ventas, setVentas] = useState<VentaResumen[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
@@ -38,6 +40,11 @@ export function ListadoVentas({ token, version }: Props) {
   const [desdeEscrito, setDesdeEscrito] = useState('');
   const [hastaEscrito, setHastaEscrito] = useState('');
   const [rango, setRango] = useState<{ desde: string; hasta: string }>({ desde: '', hasta: '' });
+
+  // Anulación con confirmación en la página
+  const [ventaAAnular, setVentaAAnular] = useState<VentaResumen | null>(null);
+  const [anulando, setAnulando] = useState(false);
+  const [errorAnular, setErrorAnular] = useState('');
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -90,6 +97,39 @@ export function ListadoVentas({ token, version }: Props) {
     setRango({ desde: '', hasta: '' });
   }
 
+  async function anularVenta() {
+    if (!ventaAAnular) return;
+    setAnulando(true);
+    setErrorAnular('');
+    try {
+      const respuesta = await fetch(`${API_URL}/ventas/${ventaAAnular.id_venta}/anular`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (respuesta.status === 401) {
+        setErrorAnular('Tu sesión venció. Volvé a iniciar sesión.');
+      } else if (respuesta.status === 403) {
+        setErrorAnular('No tenés permiso para anular ventas.');
+      } else if (!respuesta.ok) {
+        let mensaje = 'No se pudo anular la venta.';
+        try {
+          const datos = await respuesta.json();
+          if (typeof datos.detail === 'string') mensaje = datos.detail;
+        } catch {
+          // si la respuesta no es JSON, dejamos el mensaje por defecto
+        }
+        setErrorAnular(mensaje);
+      } else {
+        setVentaAAnular(null);
+        cargar();
+      }
+    } catch {
+      setErrorAnular('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setAnulando(false);
+    }
+  }
+
   const esHoy = !rango.desde && !rango.hasta;
 
   return (
@@ -111,6 +151,25 @@ export function ListadoVentas({ token, version }: Props) {
         {!esHoy && <button onClick={volverAHoy}>Volver a hoy</button>}
       </p>
 
+      {ventaAAnular && (
+        <div style={{ margin: '16px 0' }}>
+          <p>
+            ¿Anular la venta <strong>{ventaAAnular.numero_comprobante}</strong> por{' '}
+            {formatearMonto(ventaAAnular.total_a_pagar)}? La venta pasa a "anulada" y no se borra.
+            El stock <strong>no se devuelve</strong> a los lotes: si hace falta, el farmacéutico lo
+            corrige desde Stock con "Ajustar", y la devolución del dinero se registra en Caja como
+            un retiro con su motivo.
+          </p>
+          {errorAnular && <p style={{ color: 'crimson' }}>{errorAnular}</p>}
+          <button onClick={anularVenta} disabled={anulando}>
+            {anulando ? 'Anulando...' : 'Sí, anular'}
+          </button>{' '}
+          <button onClick={() => setVentaAAnular(null)} disabled={anulando}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
       {error ? (
         <p style={{ color: 'crimson' }}>
           {error} <button onClick={cargar}>Reintentar</button>
@@ -129,6 +188,7 @@ export function ListadoVentas({ token, version }: Props) {
               <th>Medio de pago</th>
               <th>Total</th>
               <th>Estado</th>
+              {puedeAnular && <th>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -142,6 +202,20 @@ export function ListadoVentas({ token, version }: Props) {
                 <td style={v.estado === 'anulada' ? { color: 'crimson' } : undefined}>
                   {v.estado === 'anulada' ? 'Anulada' : 'Confirmada'}
                 </td>
+                {puedeAnular && (
+                  <td>
+                    {v.estado === 'confirmada' && (
+                      <button
+                        onClick={() => {
+                          setErrorAnular('');
+                          setVentaAAnular(v);
+                        }}
+                      >
+                        Anular
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
