@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { ListadoVentas } from '../components/ListadoVentas';
+import { ClienteVenta, type ClienteElegido } from '../components/ClienteVenta';
 
 interface Producto {
   id_producto: number;
@@ -91,6 +92,10 @@ export function Ventas() {
   const [calculando, setCalculando] = useState(false);
   const [errorCopago, setErrorCopago] = useState('');
 
+  // Datos que pide el backend para una venta con cobertura
+  const [cliente, setCliente] = useState<ClienteElegido | null>(null);
+  const [recetaVerificada, setRecetaVerificada] = useState(false);
+
   // Se suma después de cada venta para que el listado se vuelva a pedir
   const [versionVentas, setVersionVentas] = useState(0);
 
@@ -100,7 +105,7 @@ export function Ventas() {
 
   useEffect(() => {
     claveRef.current = null;
-  }, [carrito, medioPago, obraSocialId]);
+  }, [carrito, medioPago, obraSocialId, cliente, recetaVerificada]);
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -287,6 +292,8 @@ export function Ventas() {
         setCarrito([]);
         setMedioPago('efectivo');
         setObraSocialId('');
+        setCliente(null);
+        setRecetaVerificada(false);
         cargar();
         setVersionVentas((v) => v + 1);
       }
@@ -459,6 +466,22 @@ export function Ventas() {
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {conCobertura && token && (
+                <div>
+                  <ClienteVenta token={token} cliente={cliente} alElegir={setCliente} />
+                  <p>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={recetaVerificada}
+                        onChange={(e) => setRecetaVerificada(e.target.checked)}
+                      />{' '}
+                      Receta verificada
+                    </label>
+                  </p>
                 </div>
               )}
 
