@@ -3,6 +3,7 @@ import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { ResumenCaja, type ConsolidadoCaja } from '../components/ResumenCaja';
 import { FormularioMovimientoCaja } from '../components/FormularioMovimientoCaja';
+import { CierreCaja } from '../components/CierreCaja';
 
 function mensajeDeError(datos: unknown, porDefecto: string) {
   const detail = (datos as { detail?: unknown })?.detail;
@@ -19,6 +20,9 @@ export function Caja() {
   const [consolidado, setConsolidado] = useState<ConsolidadoCaja | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+
+  // Resumen de la caja que se acaba de cerrar, para mostrar el arqueo
+  const [cierreFinal, setCierreFinal] = useState<ConsolidadoCaja | null>(null);
 
   const [monto, setMonto] = useState('');
   const [errorAbrir, setErrorAbrir] = useState('');
@@ -103,6 +107,28 @@ export function Caja() {
     }
   }
 
+  // Recién cerrada: mostramos el resumen final con el arqueo
+  if (cierreFinal) {
+    return (
+      <div>
+        <h2>Caja</h2>
+        <p style={{ color: 'green' }}>La caja se cerró correctamente.</p>
+        <ResumenCaja consolidado={cierreFinal} />
+        <p>
+          <button
+            onClick={() => {
+              setCierreFinal(null);
+              setConsolidado(null);
+              cargar();
+            }}
+          >
+            Continuar
+          </button>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h2>Caja</h2>
@@ -145,6 +171,9 @@ export function Caja() {
             <FormularioMovimientoCaja token={token} alRegistrar={() => cargar(false)} />
           )}
           <ResumenCaja consolidado={consolidado} />
+          {puedeOperar && token && (
+            <CierreCaja token={token} alCerrar={(final) => setCierreFinal(final)} />
+          )}
         </div>
       )}
     </div>
