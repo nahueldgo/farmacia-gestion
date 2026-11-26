@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { ResumenCaja, type ConsolidadoCaja } from '../components/ResumenCaja';
+import { FormularioMovimientoCaja } from '../components/FormularioMovimientoCaja';
 
 function mensajeDeError(datos: unknown, porDefecto: string) {
   const detail = (datos as { detail?: unknown })?.detail;
@@ -13,7 +14,7 @@ function mensajeDeError(datos: unknown, porDefecto: string) {
 export function Caja() {
   const { usuario } = useAuth();
   const token = usuario?.token;
-  const puedeAbrir = usuario?.rol !== 'dueno';
+  const puedeOperar = usuario?.rol !== 'dueno';
 
   const [consolidado, setConsolidado] = useState<ConsolidadoCaja | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -23,31 +24,35 @@ export function Caja() {
   const [errorAbrir, setErrorAbrir] = useState('');
   const [abriendo, setAbriendo] = useState(false);
 
-  const cargar = useCallback(async () => {
-    if (!token) return;
-    setCargando(true);
-    setError('');
-    try {
-      const respuesta = await fetch(`${API_URL}/caja/actual/consolidado`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (respuesta.status === 404) {
-        setConsolidado(null);
-      } else if (respuesta.status === 401) {
-        setError('Tu sesión venció. Volvé a iniciar sesión.');
-      } else if (respuesta.status === 403) {
-        setError('No tenés permiso para ver la caja.');
-      } else if (!respuesta.ok) {
-        setError('No se pudo cargar la caja.');
-      } else {
-        setConsolidado(await respuesta.json());
+  // Con mostrarCargando en false se actualiza en silencio, sin tapar la pantalla
+  const cargar = useCallback(
+    async (mostrarCargando = true) => {
+      if (!token) return;
+      if (mostrarCargando) setCargando(true);
+      setError('');
+      try {
+        const respuesta = await fetch(`${API_URL}/caja/actual/consolidado`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (respuesta.status === 404) {
+          setConsolidado(null);
+        } else if (respuesta.status === 401) {
+          setError('Tu sesión venció. Volvé a iniciar sesión.');
+        } else if (respuesta.status === 403) {
+          setError('No tenés permiso para ver la caja.');
+        } else if (!respuesta.ok) {
+          setError('No se pudo cargar la caja.');
+        } else {
+          setConsolidado(await respuesta.json());
+        }
+      } catch {
+        setError('No se pudo conectar con el servidor. Revisá tu conexión.');
+      } finally {
+        setCargando(false);
       }
-    } catch {
-      setError('No se pudo conectar con el servidor. Revisá tu conexión.');
-    } finally {
-      setCargando(false);
-    }
-  }, [token]);
+    },
+    [token]
+  );
 
   useEffect(() => {
     cargar();
@@ -103,12 +108,12 @@ export function Caja() {
       <h2>Caja</h2>
       {error ? (
         <p style={{ color: 'crimson' }}>
-          {error} <button onClick={cargar}>Reintentar</button>
+          {error} <button onClick={() => cargar()}>Reintentar</button>
         </p>
       ) : cargando ? (
         <p>Cargando...</p>
       ) : !consolidado ? (
-        puedeAbrir ? (
+        puedeOperar ? (
           <form onSubmit={abrirCaja}>
             <p>No hay una caja abierta. Abrila para empezar a vender.</p>
             <div>
@@ -134,8 +139,11 @@ export function Caja() {
       ) : (
         <div>
           <p>
-            <button onClick={cargar}>Actualizar</button>
+            <button onClick={() => cargar(false)}>Actualizar</button>
           </p>
+          {puedeOperar && token && (
+            <FormularioMovimientoCaja token={token} alRegistrar={() => cargar(false)} />
+          )}
           <ResumenCaja consolidado={consolidado} />
         </div>
       )}
