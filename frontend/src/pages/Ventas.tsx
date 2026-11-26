@@ -21,6 +21,32 @@ interface LineaCarrito {
   cantidad: number;
 }
 
+interface ObraSocialVenta {
+  id_obra_social: number;
+  nombre: string;
+}
+
+interface LineaCopago {
+  producto_id: number;
+  producto: string;
+  cantidad: number;
+  precio_unitario: number;
+  categoria: string | null;
+  importe: number;
+  porcentaje_cobertura: number;
+  cobertura: number;
+  copago: number;
+}
+
+interface Copago {
+  obra_social_id: number;
+  obra_social: string;
+  subtotal: number;
+  monto_cobertura: number;
+  total_a_pagar: number;
+  lineas: LineaCopago[];
+}
+
 const MEDIOS_PAGO = [
   { valor: 'efectivo', etiqueta: 'Efectivo' },
   { valor: 'tarjeta_credito', etiqueta: 'Tarjeta de crédito' },
@@ -58,6 +84,13 @@ export function Ventas() {
   const [errorVenta, setErrorVenta] = useState('');
   const [ventaOk, setVentaOk] = useState('');
 
+  // Cobertura: obra social elegida ('' = venta particular) y copago calculado
+  const [obrasSociales, setObrasSociales] = useState<ObraSocialVenta[]>([]);
+  const [obraSocialId, setObraSocialId] = useState('');
+  const [copago, setCopago] = useState<Copago | null>(null);
+  const [calculando, setCalculando] = useState(false);
+  const [errorCopago, setErrorCopago] = useState('');
+
   // Se suma después de cada venta para que el listado se vuelva a pedir
   const [versionVentas, setVersionVentas] = useState(0);
 
@@ -67,7 +100,7 @@ export function Ventas() {
 
   useEffect(() => {
     claveRef.current = null;
-  }, [carrito, medioPago]);
+  }, [carrito, medioPago, obraSocialId]);
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -97,6 +130,70 @@ export function Ventas() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Obras sociales activas para el selector
+  useEffect(() => {
+    if (!token || !puedeVender) return;
+    fetch(`${API_URL}/obras-sociales`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((datos) => setObrasSociales(datos))
+      .catch(() => setObrasSociales([]));
+  }, [token, puedeVender]);
+
+  // Cada vez que cambia el carrito o la obra social, se recalcula el copago.
+  // El cálculo no guarda nada ni toca el stock.
+  useEffect(() => {
+    if (!token || !obraSocialId || carrito.length === 0) return;
+    let cancelado = false;
+    setCalculando(true);
+    setErrorCopago('');
+    fetch(`${API_URL}/copago/calcular`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        obra_social_id: Number(obraSocialId),
+        lineas: carrito.map((l) => ({
+          producto_id: l.producto.id_producto,
+          cantidad: l.cantidad,
+        })),
+      }),
+    })
+      .then(async (respuesta) => {
+        if (cancelado) return;
+        if (respuesta.status === 401) {
+          setCopago(null);
+          setErrorCopago('Tu sesión venció. Volvé a iniciar sesión.');
+        } else if (respuesta.status === 403) {
+          setCopago(null);
+          setErrorCopago('No tenés permiso para calcular coberturas.');
+        } else if (!respuesta.ok) {
+          let datos: unknown = null;
+          try {
+            datos = await respuesta.json();
+          } catch {
+            // si la respuesta no es JSON, usamos el mensaje por defecto
+          }
+          setCopago(null);
+          setErrorCopago(mensajeDeError(datos, 'No se pudo calcular la cobertura.'));
+        } else {
+          setCopago(await respuesta.json());
+        }
+      })
+      .catch(() => {
+        if (cancelado) return;
+        setCopago(null);
+        setErrorCopago('No se pudo conectar con el servidor. Revisá tu conexión.');
+      })
+      .finally(() => {
+        if (!cancelado) setCalculando(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [token, obraSocialId, carrito]);
 
   function buscar(evento: FormEvent) {
     evento.preventDefault();
@@ -189,6 +286,7 @@ export function Ventas() {
         );
         setCarrito([]);
         setMedioPago('efectivo');
+        setObraSocialId('');
         cargar();
         setVersionVentas((v) => v + 1);
       }
@@ -202,6 +300,7 @@ export function Ventas() {
   }
 
   const total = carrito.reduce((suma, l) => suma + l.producto.precio * l.cantidad, 0);
+  const conCobertura = obraSocialId !== '';
 
   if (!puedeVender) {
     return (
@@ -297,9 +396,72 @@ export function Ventas() {
                   </li>
                 ))}
               </ul>
-              <p>
-                <strong>Total: {formatearMonto(total)}</strong>
-              </p>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label>
+                  Obra social:{' '}
+                  <select value={obraSocialId} onChange={(e) => setObraSocialId(e.target.value)}>
+                    <option value="">Sin obra social (particular)</option>
+                    {obrasSociales.map((o) => (
+                      <option key={o.id_obra_social} value={String(o.id_obra_social)}>
+                        {o.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {!conCobertura && (
+                <p>
+                  <strong>Total: {formatearMonto(total)}</strong>
+                </p>
+              )}
+
+              {conCobertura && (
+                <div style={{ marginBottom: '12px' }}>
+                  {errorCopago ? (
+                    <p style={{ color: 'crimson' }}>{errorCopago}</p>
+                  ) : calculando || !copago ? (
+                    <p>Calculando cobertura...</p>
+                  ) : (
+                    <div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Importe</th>
+                            <th>Cubre</th>
+                            <th>Copago</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {copago.lineas.map((l) => (
+                            <tr key={l.producto_id}>
+                              <td>{l.producto}</td>
+                              <td>{l.cantidad}</td>
+                              <td>{formatearMonto(l.importe)}</td>
+                              <td>
+                                {l.porcentaje_cobertura}%
+                                {l.categoria === null && ' (sin categoría)'}
+                              </td>
+                              <td>{formatearMonto(l.copago)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p>Subtotal: {formatearMonto(copago.subtotal)}</p>
+                      <p>
+                        Cobertura de {copago.obra_social}: -{formatearMonto(copago.monto_cobertura)}
+                      </p>
+                      <p>
+                        <strong>Total a pagar: {formatearMonto(copago.total_a_pagar)}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div style={{ marginBottom: '12px' }}>
                 <label>
                   Medio de pago:{' '}
@@ -312,7 +474,12 @@ export function Ventas() {
                   </select>
                 </label>
               </div>
-              <button onClick={confirmarVenta} disabled={enviando}>
+              {conCobertura && (
+                <p style={{ color: 'gray' }}>
+                  La venta con cobertura todavía no se puede registrar desde acá.
+                </p>
+              )}
+              <button onClick={confirmarVenta} disabled={enviando || conCobertura}>
                 {enviando ? 'Registrando...' : 'Confirmar venta'}
               </button>{' '}
               <button onClick={vaciarCarrito} disabled={enviando}>
@@ -323,7 +490,7 @@ export function Ventas() {
         </div>
       </div>
 
-        {token && <ListadoVentas token={token} version={versionVentas} puedeAnular={true} />}
+      {token && <ListadoVentas token={token} version={versionVentas} puedeAnular={true} />}
     </div>
   );
 }
