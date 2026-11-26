@@ -33,6 +33,10 @@ export function Coberturas() {
   const [error, setError] = useState('');
   const [mostrarAlta, setMostrarAlta] = useState(false);
   const [conReglas, setConReglas] = useState<ObraSocial | null>(null);
+  const [editando, setEditando] = useState<ObraSocial | null>(null);
+  const [confirmandoBaja, setConfirmandoBaja] = useState<ObraSocial | null>(null);
+  const [errorAccion, setErrorAccion] = useState('');
+  const [procesando, setProcesando] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -62,6 +66,40 @@ export function Coberturas() {
     if (esFarmaceutico) cargar();
   }, [esFarmaceutico, cargar]);
 
+  // Baja y reactivación: PATCH sin cuerpo
+  async function cambiarEstado(obra: ObraSocial, accion: 'baja' | 'reactivar') {
+    if (!token) return;
+    setErrorAccion('');
+    setProcesando(true);
+    try {
+      const respuesta = await fetch(`${API_URL}/obras-sociales/${obra.id_obra_social}/${accion}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (respuesta.status === 401) {
+        setErrorAccion('Tu sesión venció. Volvé a iniciar sesión.');
+      } else if (respuesta.status === 403) {
+        setErrorAccion('No tenés permiso para hacer esto.');
+      } else if (!respuesta.ok) {
+        let mensaje = 'No se pudo completar la acción.';
+        try {
+          const datos = await respuesta.json();
+          if (typeof datos.detail === 'string') mensaje = datos.detail;
+        } catch {
+          // si la respuesta no es JSON, dejamos el mensaje por defecto
+        }
+        setErrorAccion(mensaje);
+      } else {
+        setConfirmandoBaja(null);
+        cargar();
+      }
+    } catch {
+      setErrorAccion('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   if (!esFarmaceutico) {
     return (
       <div>
@@ -74,9 +112,17 @@ export function Coberturas() {
   return (
     <div>
       <h2>Configurar coberturas</h2>
-      {!mostrarAlta && (
+      {!mostrarAlta && !editando && (
         <p>
-          <button onClick={() => setMostrarAlta(true)}>Nueva obra social</button>
+          <button
+            onClick={() => {
+              setConReglas(null);
+              setConfirmandoBaja(null);
+              setMostrarAlta(true);
+            }}
+          >
+            Nueva obra social
+          </button>
         </p>
       )}
 
@@ -91,6 +137,38 @@ export function Coberturas() {
           alCancelar={() => setMostrarAlta(false)}
         />
       )}
+
+      {editando && token && (
+        <FormularioObraSocial
+          key={editando.id_obra_social}
+          token={token}
+          actual={editando}
+          alGuardar={() => {
+            setEditando(null);
+            cargar();
+          }}
+          alCancelar={() => setEditando(null)}
+        />
+      )}
+
+      {confirmandoBaja && (
+        <div style={{ border: '1px solid crimson', padding: 12, margin: '12px 0' }}>
+          <p>
+            ¿Dar de baja a <strong>{confirmandoBaja.nombre}</strong>? Ya no se va a poder elegir en
+            las ventas, pero no se pierden sus reglas ni las ventas anteriores. Se puede reactivar
+            cuando quieras.
+          </p>
+          <button onClick={() => cambiarEstado(confirmandoBaja, 'baja')} disabled={procesando}>
+            {procesando ? 'Procesando...' : 'Sí, dar de baja'}
+          </button>{' '}
+          <button onClick={() => setConfirmandoBaja(null)} disabled={procesando}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {errorAccion && <p style={{ color: 'crimson' }}>{errorAccion}</p>}
+
       {error ? (
         <p style={{ color: 'crimson' }}>
           {error} <button onClick={cargar}>Reintentar</button>
@@ -125,11 +203,39 @@ export function Coberturas() {
                   <button
                     onClick={() => {
                       setMostrarAlta(false);
+                      setEditando(null);
+                      setConfirmandoBaja(null);
                       setConReglas(o);
                     }}
                   >
                     Reglas
-                  </button>
+                  </button>{' '}
+                  <button
+                    onClick={() => {
+                      setMostrarAlta(false);
+                      setConReglas(null);
+                      setConfirmandoBaja(null);
+                      setErrorAccion('');
+                      setEditando(o);
+                    }}
+                  >
+                    Editar
+                  </button>{' '}
+                  {o.activo ? (
+                    <button
+                      onClick={() => {
+                        setErrorAccion('');
+                        setEditando(null);
+                        setConfirmandoBaja(o);
+                      }}
+                    >
+                      Dar de baja
+                    </button>
+                  ) : (
+                    <button onClick={() => cambiarEstado(o, 'reactivar')} disabled={procesando}>
+                      Reactivar
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
