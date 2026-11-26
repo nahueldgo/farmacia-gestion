@@ -1,26 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { ResumenCaja, type ConsolidadoCaja } from '../components/ResumenCaja';
 
-interface ConsolidadoCaja {
-  caja: {
-    id_caja: number;
-    hora_apertura: string;
-    monto_apertura: number;
-    estado: string;
-  };
-  efectivo_esperado: number;
-}
-
-function formatearMonto(valor: number) {
-  return valor.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-}
-
-function formatearFechaHora(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', { hourCycle: 'h23' });
-}
-
-// El backend manda "detail" como texto o como lista (errores 422)
 function mensajeDeError(datos: unknown, porDefecto: string) {
   const detail = (datos as { detail?: unknown })?.detail;
   if (typeof detail === 'string') return detail;
@@ -152,10 +134,9 @@ export function Caja() {
       ) : (
         <div>
           <p>
-            <strong>Caja abierta</strong> el {formatearFechaHora(consolidado.caja.hora_apertura)}
+            <button onClick={cargar}>Actualizar</button>
           </p>
-          <p>Monto inicial: {formatearMonto(consolidado.caja.monto_apertura)}</p>
-          <p>Efectivo esperado: {formatearMonto(consolidado.efectivo_esperado)}</p>
+          <ResumenCaja consolidado={consolidado} />
         </div>
       )}
     </div>
