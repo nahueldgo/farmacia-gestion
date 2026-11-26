@@ -84,6 +84,7 @@ export function Ventas() {
   const [enviando, setEnviando] = useState(false);
   const [errorVenta, setErrorVenta] = useState('');
   const [ventaOk, setVentaOk] = useState('');
+  const [avisoVenta, setAvisoVenta] = useState('');
 
   // Cobertura: obra social elegida ('' = venta particular) y copago calculado
   const [obrasSociales, setObrasSociales] = useState<ObraSocialVenta[]>([]);
@@ -212,6 +213,7 @@ export function Ventas() {
 
   function agregar(producto: Producto) {
     setVentaOk('');
+    setAvisoVenta('');
     setErrorVenta('');
     setCarrito((actual) => {
       const existente = actual.find((l) => l.producto.id_producto === producto.id_producto);
@@ -252,7 +254,25 @@ export function Ventas() {
     if (carrito.length === 0) return;
     setErrorVenta('');
     setVentaOk('');
+    setAvisoVenta('');
     if (!claveRef.current) claveRef.current = crypto.randomUUID();
+
+    // Lo que mostraba la pantalla, para compararlo con lo que guarda el backend
+    const totalMostrado = conCobertura && copago ? copago.total_a_pagar : null;
+
+    const cuerpo: Record<string, unknown> = {
+      medio_pago: medioPago,
+      lineas: carrito.map((l) => ({
+        producto_id: l.producto.id_producto,
+        cantidad: l.cantidad,
+      })),
+      clave_operacion: claveRef.current,
+    };
+    if (conCobertura && cliente) {
+      cuerpo.obra_social_id = Number(obraSocialId);
+      cuerpo.cliente_id = cliente.id_cliente;
+      cuerpo.receta_verificada = recetaVerificada;
+    }
 
     setEnviando(true);
     try {
@@ -262,14 +282,7 @@ export function Ventas() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          medio_pago: medioPago,
-          lineas: carrito.map((l) => ({
-            producto_id: l.producto.id_producto,
-            cantidad: l.cantidad,
-          })),
-          clave_operacion: claveRef.current,
-        }),
+        body: JSON.stringify(cuerpo),
       });
       if (respuesta.status === 401) {
         setErrorVenta('Tu sesión venció. Volvé a iniciar sesión.');
@@ -286,9 +299,20 @@ export function Ventas() {
         cargar();
       } else {
         const venta = await respuesta.json();
-        setVentaOk(
-          `Venta ${venta.numero_comprobante} registrada. Total cobrado: ${formatearMonto(venta.total_a_pagar)}.`
-        );
+        if (venta.obra_social_id) {
+          setVentaOk(
+            `Venta ${venta.numero_comprobante} registrada. Subtotal: ${formatearMonto(venta.subtotal)}. Cobertura: ${formatearMonto(venta.monto_cobertura)}. Total cobrado: ${formatearMonto(venta.total_a_pagar)}.`
+          );
+        } else {
+          setVentaOk(
+            `Venta ${venta.numero_comprobante} registrada. Total cobrado: ${formatearMonto(venta.total_a_pagar)}.`
+          );
+        }
+        if (totalMostrado !== null && Math.abs(totalMostrado - venta.total_a_pagar) > 0.005) {
+          setAvisoVenta(
+            `Atención: la pantalla mostraba ${formatearMonto(totalMostrado)} pero se registró ${formatearMonto(venta.total_a_pagar)}. Revisá la venta.`
+          );
+        }
         setCarrito([]);
         setMedioPago('efectivo');
         setObraSocialId('');
@@ -308,6 +332,15 @@ export function Ventas() {
 
   const total = carrito.reduce((suma, l) => suma + l.producto.precio * l.cantidad, 0);
   const conCobertura = obraSocialId !== '';
+
+  // Qué falta para poder confirmar una venta con cobertura
+  const faltantes: string[] = [];
+  if (conCobertura) {
+    if (!cliente) faltantes.push('elegir el cliente');
+    if (!recetaVerificada) faltantes.push('tildar la receta verificada');
+    if (errorCopago) faltantes.push('resolver el error de cobertura');
+    else if (calculando || !copago) faltantes.push('esperar el cálculo de la cobertura');
+  }
 
   if (!puedeVender) {
     return (
@@ -380,6 +413,7 @@ export function Ventas() {
         <div style={{ flex: 1 }}>
           <h3>Carrito</h3>
           {ventaOk && <p style={{ color: 'green' }}>{ventaOk}</p>}
+          {avisoVenta && <p style={{ color: 'darkorange' }}>{avisoVenta}</p>}
           {errorVenta && <p style={{ color: 'crimson' }}>{errorVenta}</p>}
           {carrito.length === 0 ? (
             <p>El carrito está vacío.</p>
@@ -497,12 +531,10 @@ export function Ventas() {
                   </select>
                 </label>
               </div>
-              {conCobertura && (
-                <p style={{ color: 'gray' }}>
-                  La venta con cobertura todavía no se puede registrar desde acá.
-                </p>
+              {faltantes.length > 0 && (
+                <p style={{ color: 'gray' }}>Para confirmar falta: {faltantes.join(', ')}.</p>
               )}
-              <button onClick={confirmarVenta} disabled={enviando || conCobertura}>
+              <button onClick={confirmarVenta} disabled={enviando || faltantes.length > 0}>
                 {enviando ? 'Registrando...' : 'Confirmar venta'}
               </button>{' '}
               <button onClick={vaciarCarrito} disabled={enviando}>
