@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { FormularioObraSocial } from '../components/FormularioObraSocial';
+import { PanelReglas } from '../components/PanelReglas';
 
 interface ObraSocial {
   id_obra_social: number;
@@ -31,6 +32,7 @@ export function Coberturas() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [mostrarAlta, setMostrarAlta] = useState(false);
+  const [conReglas, setConReglas] = useState<ObraSocial | null>(null);
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -106,6 +108,7 @@ export function Coberturas() {
               <th>Contacto</th>
               <th>Validación</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -118,10 +121,29 @@ export function Coberturas() {
                 <td style={o.activo ? undefined : { color: 'gray' }}>
                   {o.activo ? 'Activa' : 'Dada de baja'}
                 </td>
+                <td>
+                  <button
+                    onClick={() => {
+                      setMostrarAlta(false);
+                      setConReglas(o);
+                    }}
+                  >
+                    Reglas
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {conReglas && token && (
+        <PanelReglas
+          key={conReglas.id_obra_social}
+          token={token}
+          obraSocial={conReglas}
+          alCerrar={() => setConReglas(null)}
+        />
       )}
     </div>
   );
