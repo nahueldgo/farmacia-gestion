@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { ListadoVentas } from '../components/ListadoVentas';
 
 interface Producto {
   id_producto: number;
@@ -56,6 +57,9 @@ export function Ventas() {
   const [enviando, setEnviando] = useState(false);
   const [errorVenta, setErrorVenta] = useState('');
   const [ventaOk, setVentaOk] = useState('');
+
+  // Se suma después de cada venta para que el listado se vuelva a pedir
+  const [versionVentas, setVersionVentas] = useState(0);
 
   // Clave que identifica el pedido: si se reintenta el mismo pedido por un corte
   // de conexión, el backend no duplica la venta. Se renueva si cambia el carrito.
@@ -186,6 +190,7 @@ export function Ventas() {
         setCarrito([]);
         setMedioPago('efectivo');
         cargar();
+        setVersionVentas((v) => v + 1);
       }
     } catch {
       setErrorVenta(
@@ -203,6 +208,7 @@ export function Ventas() {
       <div>
         <h2>Ventas</h2>
         <p>Tu rol solo puede consultar las ventas.</p>
+        {token && <ListadoVentas token={token} version={versionVentas} />}
       </div>
     );
   }
@@ -316,6 +322,8 @@ export function Ventas() {
           )}
         </div>
       </div>
+
+      {token && <ListadoVentas token={token} version={versionVentas} />}
     </div>
   );
 }
