@@ -7,6 +7,7 @@ import { Empleados } from './pages/Empleados';
 import { Stock } from './pages/Stock';
 import { Caja } from './pages/Caja';
 import { Ventas } from './pages/Ventas';
+import { Coberturas } from './pages/Coberturas';
 
 function RutaProtegida({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuth();
@@ -16,7 +17,6 @@ function RutaProtegida({ children }: { children: React.ReactNode }) {
 }
 
 // Pantallas placeholder, se van a ir reemplazando modulo por modulo
-function Coberturas() { return <h2>Coberturas (próximamente)</h2>; }
 function Reportes() { return <h2>Reportes (próximamente)</h2>; }
 
 function AppRoutes() {
