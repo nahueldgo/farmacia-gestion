@@ -173,6 +173,7 @@ Este README es un resumen del proyecto. El detalle está en la documentación de
 ├── desktop/           # Empaquetado Electron (main process, builder config)
 ├── backend/           # API en FastAPI (Python)
 ├── database/          # Scripts DDL/DML, migraciones, esquemas PostgreSQL
+├── scripts/           # Script de bash que crea la base completa
 ├── docs/              # Documentación e informes de avance
 ├── docker-compose.yml # Orquestación de contenedores (backend, BD)
 └── README.md
@@ -212,6 +213,16 @@ docker-compose exec backend python seed.py
 | dueno | dueno1234 | dueno |
 
 Son solo para desarrollo. La API se puede probar en http://localhost:8000/docs.
+
+### Datos de demostración (opcional)
+
+Para probar el sistema con productos y obras sociales cargados:
+
+```bash
+docker-compose exec backend python seed_productos.py
+```
+
+Carga 30 medicamentos, 7 productos de perfumería, cuidado personal y otros, y 6 obras sociales con nombres inventados y sus porcentajes de cobertura, con lotes para probar las alertas de stock y vencimiento. Se puede correr varias veces sin duplicar nada y no crea usuarios. No forma parte del arranque de producción. Los precios de los medicamentos son aproximados y las fechas de los lotes se calculan desde el día de la carga.
 
 ### Frontend (modo desarrollo, en navegador)
 
@@ -261,3 +272,21 @@ La instalación hay que repetirla si se reconstruye el contenedor (`docker-compo
 - **Aplicación de escritorio:** distribución mediante instalador descargable (generado con Electron Builder); no requiere despliegue en la nube, se conecta al backend remoto.
 - **Backend / API:** se desplegará en Render o Railway (ver Tecnologías). La plataforma definitiva y la URL de producción se documentarán acá al momento de desplegar.
 - **Base de datos:** PostgreSQL alojado en Supabase o Railway (ver Tecnologías). La plataforma definitiva y la forma de conexión se documentarán acá al momento de desplegar.
+
+### Crear la base completa
+
+Sobre una base vacía (por ejemplo, la de la nube), `scripts/crear_base.sh` ejecuta en orden todos los archivos de `database/` y deja las tablas y los datos iniciales. Si algo falla, no queda nada creado. En local no hace falta, porque Docker crea la base solo.
+
+En Linux, con `psql` instalado, desde la raíz del repositorio:
+
+```bash
+bash scripts/crear_base.sh "URL_DE_LA_BASE"
+```
+
+En Windows, con Docker, desde PowerShell:
+
+```powershell
+docker run --rm -v "${PWD}:/repo:ro" postgres:16-alpine bash /repo/scripts/crear_base.sh "URL_DE_LA_BASE"
+```
+
+La dirección incluye la contraseña de la base: no se guarda en el repositorio.
