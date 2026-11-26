@@ -1,0 +1,2 @@
+# Los scripts de bash necesitan finales de línea de Linux, también al clonar en Windows.
+*.sh text eol=lf
