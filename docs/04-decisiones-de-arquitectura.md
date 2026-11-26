@@ -53,7 +53,7 @@ La misma separación entre lógica de negocio y persistencia deja abiertas otras
 
 ## Convenciones de la API
 
-**Nombres de los campos.** Todo usa `snake_case`, igual que las columnas de la base. La única excepción es el login (`nombreUsuario` y `debeCambiarContrasena`), que se definió primero junto con el frontend. Cambiarlo cuando ya funcionaba rompería lo que está andando, así que la unificación queda planificada antes del despliegue y en tres pasos: el backend acepta las dos versiones, el frontend pasa a los nombres con guion bajo y después se eliminan los viejos. El primer paso ya está hecho: `POST /auth/login` acepta `nombre_usuario` o `nombreUsuario`, y las respuestas del login y del refresh traen `debe_cambiar_contrasena` y `debeCambiarContrasena` con el mismo valor, de modo que el frontend actual sigue funcionando sin cambios. Se descartó cambiar los nombres de una sola vez: el backend y el frontend se actualizan por separado, y habría un tiempo en que no se entenderían.
+**Nombres de los campos.** Todo usa `snake_case`, igual que las columnas de la base. El login se había definido primero junto con el frontend con otros nombres (`nombreUsuario` y `debeCambiarContrasena`) y se unificó antes del despliegue, en tres pasos: el backend aceptó las dos versiones, el frontend pasó a los nombres con guion bajo y después se eliminaron los viejos. Hoy `POST /auth/login` recibe `nombre_usuario`, y las respuestas del login, de la renovación del token y del cambio de contraseña traen `debe_cambiar_contrasena`. Se descartó cambiar los nombres de una sola vez: el backend y el frontend se actualizan por separado, y habría habido un tiempo en que no se entenderían.
 
 ## Autenticación y control de acceso (Módulo 1)
 
