@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { FormularioLote } from '../components/FormularioLote';
 import { FormularioProducto } from '../components/FormularioProducto';
 import { FormularioMedicamento, type DatosMedicamento } from '../components/FormularioMedicamento';
+import { FormularioEditarProducto } from '../components/FormularioEditarProducto';
 
 interface Producto {
   id_producto: number;
@@ -72,7 +73,7 @@ export function Stock() {
   const [errorLotes, setErrorLotes] = useState('');
   const [incluirAgotados, setIncluirAgotados] = useState(false);
   const [mostrarAlta, setMostrarAlta] = useState(false);
-  
+
   // Solo farmaceutico y auxiliar pueden cargar lotes (el dueño recibe 403)
   const puedeAgregarLote = usuario?.rol === 'farmaceutico' || usuario?.rol === 'auxiliar';
   const [mostrarAltaProducto, setMostrarAltaProducto] = useState(false);
@@ -116,6 +117,10 @@ export function Stock() {
 
   // Mismos permisos que para los lotes: farmaceutico y auxiliar
   const puedeAgregarProducto = puedeAgregarLote;
+
+  // Solo el farmaceutico edita productos
+  const puedeEditarProducto = usuario?.rol === 'farmaceutico';
+  const [editando, setEditando] = useState<Producto | null>(null);
 
   const cargar = useCallback(async () => {
     if (!token) return;
@@ -189,7 +194,6 @@ export function Stock() {
     setMostrarAlta(false);
   }
 
-
   return (
     <div>
       <h2>Stock</h2>
@@ -210,6 +214,21 @@ export function Stock() {
           alCancelar={() => setMostrarAltaProducto(false)}
         />
       )}
+
+      {editando && token && (
+        <FormularioEditarProducto
+          key={editando.id_producto}
+          token={token}
+          producto={editando}
+          alGuardar={() => {
+            if (seleccionado?.id_producto === editando.id_producto) setSeleccionado(null);
+            setEditando(null);
+            cargar();
+          }}
+          alCancelar={() => setEditando(null)}
+        />
+      )}
+
       <form onSubmit={buscar} style={{ marginBottom: 16 }}>
         <input
           value={busqueda}
@@ -226,7 +245,7 @@ export function Stock() {
           <button onClick={cargar}>Reintentar</button>
         </p>
       ) : cargando ? (
-         <p>Cargando productos...</p>
+        <p>Cargando productos...</p>
       ) : productos.length === 0 ? (
         <p>
           {termino
@@ -259,6 +278,19 @@ export function Stock() {
                   <td>{p.stock_minimo ?? '-'}</td>
                   <td>
                     <button onClick={() => verLotes(p)}>Ver lotes</button>
+                    {puedeEditarProducto && (
+                      <>
+                        {' '}
+                        <button
+                          onClick={() => {
+                            setEditando(p);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        >
+                          Editar
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               );
