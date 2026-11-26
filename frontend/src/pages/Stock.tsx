@@ -124,6 +124,12 @@ export function Stock() {
   const puedeEditarProducto = usuario?.rol === 'farmaceutico';
   const [editando, setEditando] = useState<Producto | null>(null);
 
+  // Ver productos dados de baja y dar de baja / reactivar (solo farmaceutico)
+  const [verInactivos, setVerInactivos] = useState(false);
+  const [productoABajar, setProductoABajar] = useState<Producto | null>(null);
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [errorBaja, setErrorBaja] = useState('');
+
   // Solo el farmaceutico corrige o ajusta lotes
   const puedeEditarLote = usuario?.rol === 'farmaceutico';
 
@@ -144,8 +150,11 @@ export function Stock() {
     if (!token) return;
     setCargando(true);
     try {
-      const parametros = termino ? `?buscar=${encodeURIComponent(termino)}` : '';
-      const respuesta = await fetch(`${API_URL}/productos${parametros}`, {
+      const parametros = new URLSearchParams();
+      if (termino) parametros.set('buscar', termino);
+      if (verInactivos && puedeEditarProducto) parametros.set('incluir_inactivos', 'true');
+      const consulta = parametros.toString() ? `?${parametros.toString()}` : '';
+      const respuesta = await fetch(`${API_URL}/productos${consulta}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (respuesta.status === 401) {
@@ -163,7 +172,7 @@ export function Stock() {
     } finally {
       setCargando(false);
     }
-  }, [token, termino]);
+  }, [token, termino, verInactivos, puedeEditarProducto]);
 
   useEffect(() => {
     cargar();
@@ -242,13 +251,42 @@ export function Stock() {
     }
   }
 
+  async function cambiarEstadoProducto(producto: Producto, accion: 'baja' | 'reactivar') {
+    if (!token) return;
+    setCambiandoEstado(true);
+    setErrorBaja('');
+    try {
+      const respuesta = await fetch(`${API_URL}/productos/${producto.id_producto}/${accion}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (respuesta.status === 401) {
+        setErrorBaja('Tu sesión venció. Volvé a iniciar sesión.');
+      } else if (respuesta.status === 403) {
+        setErrorBaja('No tenés permiso para hacer esta acción.');
+      } else if (!respuesta.ok) {
+        setErrorBaja(
+          accion === 'baja' ? 'No se pudo dar de baja el producto.' : 'No se pudo reactivar el producto.'
+        );
+      } else {
+        setProductoABajar(null);
+        if (seleccionado?.id_producto === producto.id_producto) setSeleccionado(null);
+        cargar();
+      }
+    } catch {
+      setErrorBaja('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setCambiandoEstado(false);
+    }
+  }
+
   return (
     <div>
       <h2>Stock</h2>
 
       {puedeVerAlertas && token && <PanelAlertas token={token} />}
+
       {puedeAgregarProducto && !mostrarAltaProducto && (
-        
         <p>
           <button onClick={() => setMostrarAltaProducto(true)}>Nuevo producto</button>
         </p>
@@ -279,6 +317,26 @@ export function Stock() {
         />
       )}
 
+      {productoABajar && (
+        <div style={{ margin: '16px 0' }}>
+          <p>
+            ¿Dar de baja <strong>{productoABajar.nombre}</strong>? Deja de aparecer en Stock y en
+            Ventas. El historial se conserva y se puede reactivar después.
+          </p>
+          <button
+            onClick={() => cambiarEstadoProducto(productoABajar, 'baja')}
+            disabled={cambiandoEstado}
+          >
+            {cambiandoEstado ? 'Dando de baja...' : 'Sí, dar de baja'}
+          </button>{' '}
+          <button onClick={() => setProductoABajar(null)} disabled={cambiandoEstado}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {errorBaja && <p style={{ color: 'crimson' }}>{errorBaja}</p>}
+
       <form onSubmit={buscar} style={{ marginBottom: 16 }}>
         <input
           value={busqueda}
@@ -288,6 +346,19 @@ export function Stock() {
         <button type="submit">Buscar</button>{' '}
         {termino && <button type="button" onClick={limpiar}>Limpiar</button>}
       </form>
+
+      {puedeEditarProducto && (
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              checked={verInactivos}
+              onChange={(e) => setVerInactivos(e.target.checked)}
+            />{' '}
+            Mostrar productos dados de baja
+          </label>
+        </p>
+      )}
 
       {error ? (
         <p style={{ color: 'crimson' }}>
@@ -319,7 +390,9 @@ export function Stock() {
               const bajo = p.stock < (p.stock_minimo ?? 0);
               return (
                 <tr key={p.id_producto}>
-                  <td>{p.nombre}</td>
+                  <td style={p.activo ? undefined : { color: 'gray' }}>
+                    {p.nombre}{!p.activo && ' (de baja)'}
+                  </td>
                   <td>{p.tipo_producto}</td>
                   <td>{formatearPrecio(p.precio)}</td>
                   <td style={bajo ? { color: 'crimson', fontWeight: 'bold' } : undefined}>
@@ -339,6 +412,25 @@ export function Stock() {
                         >
                           Editar
                         </button>
+                        {' '}
+                        {p.activo ? (
+                          <button
+                            onClick={() => {
+                              setErrorBaja('');
+                              setProductoABajar(p);
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                          >
+                            Dar de baja
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => cambiarEstadoProducto(p, 'reactivar')}
+                            disabled={cambiandoEstado}
+                          >
+                            Reactivar
+                          </button>
+                        )}
                       </>
                     )}
                   </td>
