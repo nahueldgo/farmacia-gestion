@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { API_URL } from '../config/api';
+import { NuevoCatalogo } from './NuevoCatalogo';
 
 interface Opcion {
   id: number;
@@ -150,15 +151,31 @@ export function FormularioMedicamento({
         <p>Cargando catálogos...</p>
       ) : (
         <>
-          <label style={campo}>
-            Principio activo
-            <select value={principioId} onChange={(e) => setPrincipioId(e.target.value)} style={entrada}>
-              <option value="">Elegí uno</option>
-              {principios.map((p) => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
-          </label>
+          <div style={campo}>
+            <label style={{ display: 'block' }}>
+              Principio activo
+              <select value={principioId} onChange={(e) => setPrincipioId(e.target.value)} style={entrada}>
+                <option value="">Elegí uno</option>
+                {principios.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
+            </label>
+            <NuevoCatalogo
+              token={token}
+              ruta="principios-activos"
+              campoId="id_principio_activo"
+              etiqueta="principio activo"
+              alCrear={(nuevo) => {
+                setPrincipios((previos) =>
+                  [...previos, { id: nuevo.id, nombre: nuevo.nombre }].sort((a, b) =>
+                    a.nombre.localeCompare(b.nombre)
+                  )
+                );
+                setPrincipioId(String(nuevo.id));
+              }}
+            />
+          </div>
 
           <label style={campo}>
             Concentración

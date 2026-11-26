@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { API_URL } from '../config/api';
+import { NuevoCatalogo } from './NuevoCatalogo';
 
 interface Props {
   token: string;
@@ -205,7 +206,21 @@ export function FormularioProducto({ token, alCrear, alCancelar }: Props) {
               </option>
             ))}
           </select>
-        </label>
+        </label>{' '}
+        <NuevoCatalogo
+          token={token}
+          ruta="laboratorios"
+          campoId="id_laboratorio"
+          etiqueta="laboratorio"
+          alCrear={(nuevo) => {
+            setLaboratorios((previos) =>
+              [...previos, { id_laboratorio: nuevo.id, nombre: nuevo.nombre, activo: true }].sort(
+                (a, b) => a.nombre.localeCompare(b.nombre)
+              )
+            );
+            setLaboratorioId(String(nuevo.id));
+          }}
+        />
       </div>
       <div>
         <label>
