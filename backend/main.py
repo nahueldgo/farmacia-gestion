@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from cors import origenes_permitidos
 from routers.productos import router as productos_router
 from routers.medicamentos import router as medicamentos_router
 from routers.auth import router as auth_router
@@ -20,11 +21,9 @@ from routers.reportes import router as reportes_router
 
 app = FastAPI(title="Sistema de Gestión Farmacia - API")
 
-# TEMPORAL: allow_origins="*" solo para desarrollo; restringir a los orígenes reales antes de desplegar.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=origenes_permitidos(),
     allow_methods=["*"],
     allow_headers=["*"],
 )
