@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { AbrirCajaRapida } from '../components/AbrirCajaRapida';
 import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { ListadoVentas } from '../components/ListadoVentas';
@@ -85,6 +86,8 @@ export function Ventas() {
   const [errorVenta, setErrorVenta] = useState('');
   const [ventaOk, setVentaOk] = useState('');
   const [avisoVenta, setAvisoVenta] = useState('');
+  // La venta se rechazó porque no hay una caja abierta: ofrecemos ir a abrirla
+  const [sinCaja, setSinCaja] = useState(false);
 
   // Cobertura: obra social elegida ('' = venta particular) y copago calculado
   const [obrasSociales, setObrasSociales] = useState<ObraSocialVenta[]>([]);
@@ -215,6 +218,7 @@ export function Ventas() {
     setVentaOk('');
     setAvisoVenta('');
     setErrorVenta('');
+    setSinCaja(false);
     setCarrito((actual) => {
       const existente = actual.find((l) => l.producto.id_producto === producto.id_producto);
       if (existente) {
@@ -255,6 +259,7 @@ export function Ventas() {
     setErrorVenta('');
     setVentaOk('');
     setAvisoVenta('');
+    setSinCaja(false);
     if (!claveRef.current) claveRef.current = crypto.randomUUID();
 
     // Lo que mostraba la pantalla, para compararlo con lo que guarda el backend
@@ -295,7 +300,9 @@ export function Ventas() {
         } catch {
           // si la respuesta no es JSON, usamos el mensaje por defecto
         }
-        setErrorVenta(mensajeDeError(datos, 'No se pudo registrar la venta.'));
+        const mensaje = mensajeDeError(datos, 'No se pudo registrar la venta.');
+        setErrorVenta(mensaje);
+        setSinCaja(respuesta.status === 409 && mensaje.startsWith('No hay una caja abierta'));
         cargar();
       } else {
         const venta = await respuesta.json();
@@ -415,6 +422,16 @@ export function Ventas() {
           {ventaOk && <p style={{ color: 'green' }}>{ventaOk}</p>}
           {avisoVenta && <p style={{ color: 'darkorange' }}>{avisoVenta}</p>}
           {errorVenta && <p style={{ color: 'crimson' }}>{errorVenta}</p>}
+          {sinCaja && token && (
+            <AbrirCajaRapida
+              token={token}
+              alAbrir={() => {
+                setSinCaja(false);
+                setErrorVenta('');
+                setVentaOk('Caja abierta. Ya podés confirmar la venta.');
+              }}
+            />
+          )}
           {carrito.length === 0 ? (
             <p>El carrito está vacío.</p>
           ) : (
