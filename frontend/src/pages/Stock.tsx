@@ -3,6 +3,7 @@ import { API_URL } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { FormularioLote } from '../components/FormularioLote';
 import { FormularioProducto } from '../components/FormularioProducto';
+import { FormularioMedicamento, type DatosMedicamento } from '../components/FormularioMedicamento';
 
 interface Producto {
   id_producto: number;
@@ -75,6 +76,43 @@ export function Stock() {
   // Solo farmaceutico y auxiliar pueden cargar lotes (el dueño recibe 403)
   const puedeAgregarLote = usuario?.rol === 'farmaceutico' || usuario?.rol === 'auxiliar';
   const [mostrarAltaProducto, setMostrarAltaProducto] = useState(false);
+
+  // Datos de medicamento del producto seleccionado
+  const [medicamento, setMedicamento] = useState<DatosMedicamento | null>(null);
+  const [cargandoMed, setCargandoMed] = useState(false);
+  const [errorMed, setErrorMed] = useState('');
+  const [mostrarFormMed, setMostrarFormMed] = useState(false);
+
+  const cargarMedicamento = useCallback(async () => {
+    setMostrarFormMed(false);
+    setErrorMed('');
+    setMedicamento(null);
+    if (!seleccionado || !token || seleccionado.tipo_producto !== 'medicamento') return;
+    setCargandoMed(true);
+    try {
+      const respuesta = await fetch(`${API_URL}/productos/${seleccionado.id_producto}/medicamento`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (respuesta.status === 404) return; // todavía no tiene datos cargados
+      if (respuesta.status === 401) {
+        setErrorMed('Tu sesión venció. Volvé a iniciar sesión.');
+        return;
+      }
+      if (!respuesta.ok) {
+        setErrorMed('No se pudieron cargar los datos del medicamento.');
+        return;
+      }
+      setMedicamento(await respuesta.json());
+    } catch {
+      setErrorMed('No se pudo conectar con el servidor. Revisá tu conexión.');
+    } finally {
+      setCargandoMed(false);
+    }
+  }, [seleccionado, token]);
+
+  useEffect(() => {
+    cargarMedicamento();
+  }, [cargarMedicamento]);
 
   // Mismos permisos que para los lotes: farmaceutico y auxiliar
   const puedeAgregarProducto = puedeAgregarLote;
@@ -258,6 +296,42 @@ export function Stock() {
                 cargar();
               }}
               alCancelar={() => setMostrarAlta(false)}
+            />
+          )}
+
+          {seleccionado.tipo_producto === 'medicamento' && (
+            <div style={{ marginTop: 16 }}>
+              <strong>Datos de medicamento: </strong>
+              {cargandoMed ? (
+                'Cargando...'
+              ) : errorMed ? (
+                <span style={{ color: 'crimson' }}>{errorMed}</span>
+              ) : medicamento ? (
+                `${medicamento.concentracion} · ${medicamento.requiere_receta ? 'Requiere receta' : 'Venta libre'}`
+              ) : (
+                'Sin datos cargados'
+              )}
+              {!cargandoMed &&
+                !mostrarFormMed &&
+                (medicamento ? usuario?.rol === 'farmaceutico' : puedeAgregarLote) && (
+                  <>
+                    {' '}
+                    <button onClick={() => setMostrarFormMed(true)}>
+                      {medicamento ? 'Editar datos' : 'Cargar datos'}
+                    </button>
+                  </>
+                )}
+            </div>
+          )}
+
+          {mostrarFormMed && token && (
+            <FormularioMedicamento
+              productoId={seleccionado.id_producto}
+              productoNombre={seleccionado.nombre}
+              token={token}
+              actual={medicamento}
+              onGuardado={cargarMedicamento}
+              onCancelar={() => setMostrarFormMed(false)}
             />
           )}
 
