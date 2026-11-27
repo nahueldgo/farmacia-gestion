@@ -6,7 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session
 
-from models import Caja, Empleado
+from models import Caja, Empleado, MovimientoCaja, Venta
+from routers.caja import consolidado_de_una_caja
 from servicios.base_ventas import RangoDeFechasInvalido
 from servicios.caja import ESTADO_ABIERTA, ESTADO_CERRADA, cierres_del_periodo
 
@@ -35,7 +36,7 @@ def caja(id_caja: int, dia: date, estado: str = ESTADO_CERRADA) -> Caja:
 def session(monkeypatch):
     monkeypatch.setattr("servicios.caja.hoy", lambda: HOY)
     motor = create_engine("sqlite://", poolclass=StaticPool)
-    for tabla in (Empleado, Caja):
+    for tabla in (Empleado, Caja, Venta, MovimientoCaja):
         tabla.__table__.create(motor)
     with Session(motor) as sesion:
         sesion.add_all([empleado(LUCIA, "Lucía", "Gómez"), empleado(MARTIN, "Martín", "Pérez")])
@@ -73,6 +74,11 @@ def test_cada_cierre_trae_quien_abrio_y_quien_cerro(session):
     (_, abrio, cerro), = cierres_del_periodo(session, None, None)
     assert (abrio.nombre, abrio.apellido) == ("Lucía", "Gómez")
     assert (cerro.nombre, cerro.apellido) == ("Martín", "Pérez")
+
+
+def test_el_consolidado_de_una_caja_abierta_dice_quien_la_abrio(session):
+    respuesta = consolidado_de_una_caja(5, session=session, usuario={})
+    assert respuesta.caja.empleado_apertura == "Lucía Gómez"
 
 
 def test_hasta_no_puede_ser_anterior_a_desde(session):

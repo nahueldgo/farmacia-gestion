@@ -39,9 +39,13 @@ class CajaRespuesta(BaseModel):
     diferencia: Optional[float] = None
 
 
-# Una fila del historial de cierres: la caja con el nombre de quien la abrió y de quien la cerró.
-class CierreResumen(CajaRespuesta):
+# La caja con el nombre de quien la abrió.
+class CajaConApertura(CajaRespuesta):
     empleado_apertura: str
+
+
+# Una fila del historial de cierres: además, el nombre de quien la cerró.
+class CierreResumen(CajaConApertura):
     empleado_cierre: str
 
 
@@ -77,7 +81,7 @@ class TotalPorMedioPagoRespuesta(TotalesRespuesta):
 
 
 class ConsolidadoRespuesta(BaseModel):
-    caja: CajaRespuesta
+    caja: CajaConApertura
     ventas: TotalesRespuesta
     por_tipo: list[TotalPorTipoRespuesta]
     por_medio_pago: list[TotalPorMedioPagoRespuesta]

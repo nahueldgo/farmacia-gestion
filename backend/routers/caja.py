@@ -15,6 +15,7 @@ from roles import ROLES_OPERATIVOS
 from schemas_caja import (
     CajaAbrir,
     CajaCerrar,
+    CajaConApertura,
     CajaRespuesta,
     CierreResumen,
     ConsolidadoRespuesta,
@@ -66,12 +67,16 @@ def _respuesta(caja: Caja) -> CajaRespuesta:
     )
 
 
+def _nombre_completo(empleado: Empleado) -> str:
+    return f"{empleado.nombre} {empleado.apellido}"
+
+
+def _caja_con_apertura(caja: Caja, abrio: Empleado) -> CajaConApertura:
+    return CajaConApertura(**_respuesta(caja).model_dump(), empleado_apertura=_nombre_completo(abrio))
+
+
 def _cierre_resumen(caja: Caja, abrio: Empleado, cerro: Empleado) -> CierreResumen:
-    return CierreResumen(
-        **_respuesta(caja).model_dump(),
-        empleado_apertura=f"{abrio.nombre} {abrio.apellido}",
-        empleado_cierre=f"{cerro.nombre} {cerro.apellido}",
-    )
+    return CierreResumen(**_caja_con_apertura(caja, abrio).model_dump(), empleado_cierre=_nombre_completo(cerro))
 
 
 def _movimiento_respuesta(movimiento: MovimientoCaja) -> MovimientoRespuesta:
@@ -86,9 +91,9 @@ def _movimiento_respuesta(movimiento: MovimientoCaja) -> MovimientoRespuesta:
     )
 
 
-def _consolidado_respuesta(caja: Caja, consolidado: Consolidado) -> ConsolidadoRespuesta:
+def _consolidado_respuesta(session: Session, caja: Caja, consolidado: Consolidado) -> ConsolidadoRespuesta:
     return ConsolidadoRespuesta(
-        caja=_respuesta(caja),
+        caja=_caja_con_apertura(caja, session.get(Empleado, caja.empleado_apertura_id)),
         ventas=TotalesRespuesta(**asdict(consolidado.ventas)),
         por_tipo=[TotalPorTipoRespuesta(tipo=tipo, **asdict(totales)) for tipo, totales in consolidado.por_tipo.items()],
         por_medio_pago=[
@@ -167,7 +172,7 @@ def cerrar_caja_actual(
         raise HTTPException(status_code=409, detail=f"{NO_HAY_CAJA_ABIERTA}: no hay nada para cerrar")
 
     consolidado = cerrar_caja(session, caja, empleado_del_usuario(session, usuario), datos.monto_declarado)
-    respuesta = _consolidado_respuesta(caja, consolidado)
+    respuesta = _consolidado_respuesta(session, caja, consolidado)
     session.commit()
     return respuesta
 
@@ -178,7 +183,7 @@ def consolidado_actual(
     usuario: dict = Depends(obtener_usuario_actual),
 ):
     caja = _caja_abierta_o_404(session)
-    return _consolidado_respuesta(caja, consolidar_caja(session, caja))
+    return _consolidado_respuesta(session, caja, consolidar_caja(session, caja))
 
 
 # Historial de cierres: las cajas cerradas de un día de Argentina (por defecto, hoy) o de un rango con desde y hasta.
@@ -204,4 +209,4 @@ def consolidado_de_una_caja(
     usuario: dict = Depends(obtener_usuario_actual),
 ):
     caja = obtener_o_404(session, Caja, id_caja, CAJA_NO_ENCONTRADA)
-    return _consolidado_respuesta(caja, consolidar_caja(session, caja))
+    return _consolidado_respuesta(session, caja, consolidar_caja(session, caja))
