@@ -99,16 +99,21 @@ export function FormularioEditarProducto({ token, producto, alGuardar, alCancela
     // Solo mandamos lo que cambió
     const cambios: Record<string, unknown> = {};
     if (nombre.trim() !== producto.nombre) cambios.nombre = nombre.trim();
-    if (descripcion.trim() !== (producto.descripcion ?? '') && descripcion.trim()) {
-      cambios.descripcion = descripcion.trim();
+    // Si se vacía, mandamos null para borrar la descripción
+    if (descripcion.trim() !== (producto.descripcion ?? '')) {
+      cambios.descripcion = descripcion.trim() || null;
     }
     if (precioNumero !== Number(producto.precio)) cambios.precio = precioNumero;
     if (Number(condicionIvaId) !== producto.condicion_iva_id) {
       cambios.condicion_iva_id = Number(condicionIvaId);
     }
-    if (laboratorioId && Number(laboratorioId) !== producto.laboratorio_id) {
-      cambios.laboratorio_id = Number(laboratorioId);
+    
+    // Si se elige "Ninguno", mandamos null (el backend lo rechaza si es un medicamento)
+    const laboratorioNuevo = laboratorioId ? Number(laboratorioId) : null;
+    if (laboratorioNuevo !== producto.laboratorio_id) {
+      cambios.laboratorio_id = laboratorioNuevo;
     }
+    
     if (minimo !== (producto.stock_minimo ?? 0)) cambios.stock_minimo = minimo;
 
     if (Object.keys(cambios).length === 0) {
