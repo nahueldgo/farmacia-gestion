@@ -16,6 +16,7 @@ export interface ConsolidadoCaja {
   caja: {
     id_caja: number;
     hora_apertura: string;
+    empleado_apertura?: string;
     monto_apertura: number;
     estado: string;
     hora_cierre: string | null;
@@ -63,6 +64,7 @@ export function ResumenCaja({ consolidado }: { consolidado: ConsolidadoCaja }) {
         <strong>{cerrada ? 'Caja cerrada' : 'Caja abierta'}</strong> el{' '}
         {formatearFechaHora(caja.hora_apertura)}
         {cerrada && caja.hora_cierre && <> · cerrada el {formatearFechaHora(caja.hora_cierre)}</>}
+        {caja.empleado_apertura && <> · abierta por {caja.empleado_apertura}</>}
       </p>
       <p>Monto inicial: {formatearMonto(caja.monto_apertura)}</p>
 
